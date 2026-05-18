@@ -104,6 +104,17 @@ export default function Sidebar({ open, onClose }: Props) {
             <LogOut size={15} /> Sign Out
           </button>
         </div>
+
+        {/* Powered by */}
+        <div className="px-4 py-3 border-t border-gray-100 shrink-0 flex flex-col items-center gap-1">
+          <p className="text-[9px] text-gray-400 uppercase tracking-widest font-medium">Powered by</p>
+          <img
+            src={`${import.meta.env.BASE_URL}the-raise-logo.png`}
+            alt="The Raise"
+            className="h-5 object-contain opacity-80 hover:opacity-100 transition-opacity"
+          />
+          <p className="text-[9px] text-gray-400 font-medium tracking-wide">KEJ IT Solutions</p>
+        </div>
       </aside>
     </>
   )

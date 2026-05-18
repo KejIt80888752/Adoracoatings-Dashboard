@@ -1,7 +1,20 @@
 import { useState, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import { Eye, EyeOff, Loader2, ShieldCheck } from 'lucide-react'
+import { Eye, EyeOff, Loader2, MapPin, Phone, Mail } from 'lucide-react'
+
+const DEMO_CREDS = [
+  { label: 'Admin',   email: 'admin@adoracoatings.com',   pw: 'admin123' },
+  { label: 'Manager', email: 'manager@adoracoatings.com', pw: 'manager123' },
+  { label: 'Sales',   email: 'sales@adoracoatings.com',   pw: 'sales123' },
+]
+
+const STATS = [
+  { v: '28+',   l: 'Years of\nExpertise'  },
+  { v: '2400+', l: 'Projects\nCompleted'  },
+  { v: '120+',  l: 'Premium\nProducts'    },
+  { v: 'PAN',   l: 'India\nPresence'      },
+]
 
 export default function Login() {
   const { login }   = useAuth()
@@ -20,19 +33,19 @@ export default function Login() {
     const ok = login(email, pw)
     setLoading(false)
     if (ok) navigate('/')
-    else setError('Invalid credentials. Password must be at least 6 characters.')
+    else setError('Invalid credentials. Use a demo account below.')
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex">
+  const fillCred = (e: string, p: string) => { setEmail(e); setPw(p); setError('') }
 
-      {/* Left — brand panel */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 bg-brand relative overflow-hidden">
-        <div className="absolute -top-20 -left-20 w-72 h-72 rounded-full bg-white/5" />
-        <div className="absolute -bottom-16 -right-16 w-56 h-56 rounded-full bg-white/5" />
+  return (
+    <div className="min-h-screen flex">
+
+      {/* Left — dark brand panel */}
+      <div className="hidden lg:flex lg:w-[45%] flex-col justify-between p-10" style={{ background: 'linear-gradient(160deg, #0d2b2b 0%, #1a4f4f 50%, #0d2b2b 100%)' }}>
 
         {/* Logo */}
-        <div className="relative z-10">
+        <div>
           <img
             src="https://www.adoracoatings.com/assets/images/AA0030/dynamic/companylogos/ar9x2/Adora-Coatings-Logo-White.png"
             alt="AdoraCoatings"
@@ -43,96 +56,131 @@ export default function Login() {
               if (fb) fb.classList.remove('hidden')
             }}
           />
-          <div className="hidden">
-            <p className="font-display font-bold text-white text-2xl">AdoraCoatings</p>
-            <p className="text-white/70 text-sm">redefining spaces</p>
+          <div className="hidden mt-1">
+            <p className="font-display font-bold text-white text-2xl tracking-tight">AdoraCoatings</p>
+            <p className="text-white/50 text-sm">redefining spaces</p>
           </div>
+          <p className="text-white/40 text-xs mt-2 tracking-widest uppercase">Business Dashboard</p>
         </div>
 
-        {/* Text */}
-        <div className="relative z-10">
-          <h1 className="font-display text-4xl font-bold text-white leading-tight mb-4">
-            Transform Spaces<br />with Elegance
+        {/* Headline */}
+        <div className="space-y-4">
+          <h1 className="font-display text-3xl font-bold text-white leading-snug">
+            Premium Wall Finishes &<br />Designer Coatings
           </h1>
-          <p className="text-white/80 text-sm leading-relaxed max-w-xs">
-            Over 28 years of expertise in premium interior & exterior wall finishes, metallic coatings, and designer flooring.
+          <p className="text-white/60 text-sm leading-relaxed max-w-xs">
+            Transforming spaces with luxury metallic finishes, Moroccan plasters, and bespoke interior solutions since 1996.
           </p>
-          <div className="grid grid-cols-3 gap-4 mt-10">
-            {[{l:'Years',v:'28+'},{l:'Projects',v:'2400+'},{l:'Products',v:'120+'}].map(s=>(
-              <div key={s.l} className="border border-white/20 rounded-xl p-4 text-center bg-white/10">
-                <p className="font-display text-2xl font-bold text-gray-800">{s.v}</p>
-                <p className="text-xs text-white/60 mt-0.5">{s.l}</p>
+
+          {/* Stats grid */}
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            {STATS.map(s => (
+              <div key={s.v} className="rounded-xl p-4 border border-white/10" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                <p className="font-display text-2xl font-bold text-[#5ecece]">{s.v}</p>
+                <p className="text-white/50 text-xs mt-0.5 whitespace-pre-line leading-tight">{s.l}</p>
               </div>
             ))}
           </div>
+
+          {/* Address */}
+          <div className="space-y-2 pt-2">
+            <div className="flex items-start gap-2 text-white/50 text-xs">
+              <MapPin size={12} className="mt-0.5 shrink-0 text-[#5ecece]" />
+              <span>No. 4, Pallikaranai, Chennai – 600 100, Tamil Nadu, India</span>
+            </div>
+            <div className="flex items-center gap-2 text-white/50 text-xs">
+              <Phone size={12} className="shrink-0 text-[#5ecece]" />
+              <span>+91 98400 00000</span>
+            </div>
+            <div className="flex items-center gap-2 text-white/50 text-xs">
+              <Mail size={12} className="shrink-0 text-[#5ecece]" />
+              <span>info@adoracoatings.com</span>
+            </div>
+          </div>
         </div>
 
-        <p className="text-xs text-white/40 relative z-10">© {new Date().getFullYear()} AdoraCoatings. All rights reserved.</p>
+        {/* Footer — The Raise */}
+        <div className="flex flex-col items-start gap-1">
+          <p className="text-[9px] text-white/25 uppercase tracking-widest font-medium">Powered by</p>
+          <img
+            src={`${import.meta.env.BASE_URL}the-raise-logo.png`}
+            alt="The Raise"
+            className="h-6 object-contain opacity-50 hover:opacity-80 transition-opacity"
+          />
+          <p className="text-[9px] text-white/30 font-medium tracking-wide">KEJ IT Solutions</p>
+        </div>
       </div>
 
-      {/* Right — form */}
-      <div className="flex-1 flex items-center justify-center p-6 bg-white">
-        <div className="w-full max-w-md">
+      {/* Right — form panel */}
+      <div className="flex-1 flex items-center justify-center p-8 bg-gray-50">
+        <div className="w-full max-w-sm">
 
           {/* Mobile logo */}
-          <div className="lg:hidden mb-8">
-            <img
-              src="https://www.adoracoatings.com/assets/images/AA0030/dynamic/companylogos/ar9x2/Adora-Coatings-Logo-White.png"
-              alt="AdoraCoatings"
-              className="h-10 object-contain brightness-0"
-              onError={e => { e.currentTarget.style.display='none' }}
-            />
+          <div className="lg:hidden mb-6 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-brand flex items-center justify-center shrink-0">
+              <span className="text-white font-bold text-sm font-display">AC</span>
+            </div>
+            <div>
+              <p className="font-display font-bold text-gray-800 text-base">AdoraCoatings</p>
+              <p className="text-[10px] text-gray-400">Business Dashboard</p>
+            </div>
           </div>
 
-          <h2 className="font-display text-3xl font-bold text-gray-800 mb-1">Welcome back</h2>
-          <p className="text-gray-400 text-sm mb-8">Sign in to your business dashboard</p>
+          <h2 className="font-display text-2xl font-bold text-gray-800 mb-1">Sign In</h2>
+          <p className="text-gray-400 text-sm mb-6">Access your business dashboard</p>
 
-          <form onSubmit={submit} className="space-y-5">
+          <form onSubmit={submit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">Email Address</label>
-              <input type="email" required value={email} onChange={e=>setEmail(e.target.value)}
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Email Address</label>
+              <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
                 placeholder="you@adoracoatings.com" className="input-dark" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">Password</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Password</label>
               <div className="relative">
-                <input type={show?'text':'password'} required value={pw} onChange={e=>setPw(e.target.value)}
+                <input type={show ? 'text' : 'password'} required value={pw} onChange={e => setPw(e.target.value)}
                   placeholder="Enter your password" className="input-dark pr-10" />
-                <button type="button" onClick={()=>setShow(s=>!s)}
+                <button type="button" onClick={() => setShow(s => !s)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand transition-colors">
-                  {show?<EyeOff size={16}/>:<Eye size={16}/>}
+                  {show ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-3 py-2.5">{error}</div>
+              <div className="bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg px-3 py-2">{error}</div>
             )}
-            <div className="flex items-center justify-between text-xs">
-              <label className="flex items-center gap-2 text-gray-500 cursor-pointer">
-                <input type="checkbox" className="rounded accent-brand" /> Remember me
-              </label>
-              <a href="#" className="text-brand hover:text-brand-dark">Forgot password?</a>
-            </div>
             <button type="submit" disabled={loading}
               className="w-full btn-gold flex items-center justify-center gap-2 py-3 text-sm font-semibold">
-              {loading?<><Loader2 size={16} className="animate-spin"/>Signing in...</>:'Sign In to Dashboard'}
+              {loading ? <><Loader2 size={16} className="animate-spin" />Signing in...</> : 'Sign In →'}
             </button>
           </form>
 
-          <div className="mt-8 flex items-center gap-2 text-xs text-gray-400">
-            <ShieldCheck size={13} className="text-brand/60" />
-            Protected with 256-bit SSL encryption
+          {/* Demo credentials */}
+          <div className="mt-6">
+            <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-2">Demo Accounts — click to fill</p>
+            <div className="space-y-2">
+              {DEMO_CREDS.map(c => (
+                <button key={c.label} type="button"
+                  onClick={() => fillCred(c.email, c.pw)}
+                  className="w-full text-left rounded-lg border border-gray-200 bg-white hover:border-brand hover:bg-[#f0fafa] px-3 py-2.5 transition-all group">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-gray-700 group-hover:text-brand">{c.label}</span>
+                    <span className="text-[10px] text-gray-300 group-hover:text-brand/50">click to fill</span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-0.5">{c.email}</p>
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Powered by */}
-          <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col items-center gap-1.5">
-            <p className="text-[10px] text-gray-400 uppercase tracking-widest font-medium">Powered by</p>
+          <div className="mt-6 pt-5 border-t border-gray-100 flex flex-col items-center gap-1 lg:hidden">
+            <p className="text-[9px] text-gray-400 uppercase tracking-widest font-medium">Powered by</p>
             <img
               src={`${import.meta.env.BASE_URL}the-raise-logo.png`}
               alt="The Raise"
-              className="h-6 object-contain opacity-70 hover:opacity-100 transition-opacity"
+              className="h-5 object-contain opacity-60"
             />
-            <p className="text-[10px] text-gray-400 font-medium tracking-wide">KEJ IT Solutions</p>
+            <p className="text-[9px] text-gray-400 font-medium tracking-wide">KEJ IT Solutions</p>
           </div>
         </div>
       </div>

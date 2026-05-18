@@ -37,7 +37,7 @@ export default function Sidebar({ open, onClose }: Props) {
       )}>
 
         {/* Logo */}
-        <div className="flex items-center justify-between px-4 h-16 border-b border-gray-100 shrink-0">
+        <div className="flex items-center justify-between px-4 h-16 border-b border-gray-100 shrink-0 bg-brand">
           <img
             src="https://www.adoracoatings.com/assets/images/AA0030/dynamic/companylogos/ar9x2/Adora-Coatings-Logo-White.png"
             alt="AdoraCoatings"

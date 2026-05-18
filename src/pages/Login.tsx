@@ -123,6 +123,17 @@ export default function Login() {
             <ShieldCheck size={13} className="text-brand/60" />
             Protected with 256-bit SSL encryption
           </div>
+
+          {/* Powered by */}
+          <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col items-center gap-1.5">
+            <p className="text-[10px] text-gray-400 uppercase tracking-widest font-medium">Powered by</p>
+            <img
+              src={`${import.meta.env.BASE_URL}the-raise-logo.png`}
+              alt="The Raise"
+              className="h-6 object-contain opacity-70 hover:opacity-100 transition-opacity"
+            />
+            <p className="text-[10px] text-gray-400 font-medium tracking-wide">KEJ IT Solutions</p>
+          </div>
         </div>
       </div>
     </div>

@@ -9,8 +9,8 @@ const catData  = [
   {name:'Metallic',v:38},{name:'Moroccan',v:22},{name:'Decorative',v:17},{name:'Exterior',v:15},{name:'Others',v:8}
 ]
 const leads    = [{w:'W1',total:42,conv:8},{w:'W2',total:55,conv:12},{w:'W3',total:48,conv:9},{w:'W4',total:63,conv:15}]
-const COLORS   = ['#C9A96E','#E2C99A','#A07840','#6b5a30','#3d3520']
-const tt = { backgroundColor:'#1A1A1A', border:'1px solid #2A2A2A', borderRadius:8, fontSize:12, color:'#F5F0E8' }
+const COLORS   = ['#2a7b7b','#3a9595','#a3e0e0','#d1f0f0','#1a5f5f']
+const tt = { backgroundColor:"#fff", border:"1px solid #e5e7eb", borderRadius:8, fontSize:12, color:"#374151"}
 
 const KPIS = [
   {l:'Gross Revenue',  v:'₹12,45,000',chg:'+18%',up:true },
@@ -26,7 +26,7 @@ export default function Reports() {
         {KPIS.map(k=>(
           <div key={k.l} className="card">
             <p className="text-xs text-gray-500">{k.l}</p>
-            <p className="text-2xl font-bold text-white mt-1">{k.v}</p>
+            <p className="text-2xl font-bold text-gray-800 mt-1">{k.v}</p>
             <p className={`text-xs mt-1 flex items-center gap-1 ${k.up?'text-green-400':'text-red-400'}`}>
               {k.up?<TrendingUp size={11}/>:<TrendingDown size={11}/>}{k.chg} vs last month
             </p>
@@ -41,13 +41,13 @@ export default function Reports() {
         </div>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={monthly} barGap={4}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A"/>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb"/>
             <XAxis dataKey="m" tick={{fontSize:11,fill:'#6b7280'}} axisLine={false} tickLine={false}/>
             <YAxis tick={{fontSize:11,fill:'#6b7280'}} axisLine={false} tickLine={false} tickFormatter={v=>`₹${(v/1000).toFixed(0)}k`}/>
             <Tooltip contentStyle={tt} formatter={(v:number)=>`₹${v.toLocaleString()}`}/>
             <Legend wrapperStyle={{fontSize:12}}/>
-            <Bar dataKey="rev" name="Revenue" fill="#C9A96E" radius={[4,4,0,0]} barSize={18}/>
-            <Bar dataKey="exp" name="Expense" fill="#3d3520" radius={[4,4,0,0]} barSize={18}/>
+            <Bar dataKey="rev" name="Revenue" fill="#2a7b7b" radius={[4,4,0,0]} barSize={18}/>
+            <Bar dataKey="exp" name="Expense" fill="#d1f0f0" radius={[4,4,0,0]} barSize={18}/>
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -70,13 +70,13 @@ export default function Reports() {
           <p className="section-title text-base mb-4">Lead Conversion (May)</p>
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={leads}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A"/>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb"/>
               <XAxis dataKey="w" tick={{fontSize:11,fill:'#6b7280'}} axisLine={false} tickLine={false}/>
               <YAxis tick={{fontSize:11,fill:'#6b7280'}} axisLine={false} tickLine={false}/>
               <Tooltip contentStyle={tt}/>
               <Legend wrapperStyle={{fontSize:12}}/>
-              <Line type="monotone" dataKey="total" name="Total Leads" stroke="#3d3520" strokeWidth={2} dot={{r:4,fill:'#3d3520'}}/>
-              <Line type="monotone" dataKey="conv"  name="Converted"  stroke="#C9A96E" strokeWidth={2.5} dot={{r:4,fill:'#C9A96E'}}/>
+              <Line type="monotone" dataKey="total" name="Total Leads" stroke="#a3e0e0" strokeWidth={2} dot={{r:4,fill:'#3d3520'}}/>
+              <Line type="monotone" dataKey="conv"  name="Converted"  stroke="#2a7b7b" strokeWidth={2.5} dot={{r:4,fill:'#C9A96E'}}/>
             </LineChart>
           </ResponsiveContainer>
         </div>

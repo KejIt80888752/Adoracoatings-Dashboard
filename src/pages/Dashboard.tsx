@@ -29,7 +29,7 @@ const alerts = [
   { msg: 'Monthly target 91% achieved',               warn: false },
 ]
 const STATS = [
-  { label: 'Total Revenue',  val: '₹12,45,000', chg: '+18%', up: true,  icon: TrendingUp,   color: 'text-brand-gold'  },
+  { label: 'Total Revenue',  val: '₹12,45,000', chg: '+18%', up: true,  icon: TrendingUp,   color: 'text-brand'  },
   { label: 'Active Products',val: '48 SKUs',     chg: '+4 new',up: true,  icon: Package,      color: 'text-blue-400'   },
   { label: 'Active Leads',   val: '236',         chg: '+24 wk', up: true,  icon: Users,        color: 'text-purple-400' },
   { label: 'Pending Orders', val: '58',          chg: '-3 today',up: false,icon: ShoppingCart, color: 'text-orange-400' },
@@ -37,7 +37,7 @@ const STATS = [
 const statusBadge: Record<string, string> = { Hot:'badge-red', Warm:'badge-yellow', New:'badge-blue' }
 const viaBadge: Record<string, string>    = { WhatsApp:'badge-green', Email:'badge-blue' }
 
-const tooltipStyle = { backgroundColor: '#1A1A1A', border: '1px solid #2A2A2A', borderRadius: 8, fontSize: 12, color: '#F5F0E8' }
+const tooltipStyle = { backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 12, color: '#374151' }
 
 export default function Dashboard() {
   return (
@@ -70,15 +70,15 @@ export default function Dashboard() {
             <AreaChart data={revenue}>
               <defs>
                 <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#C9A96E" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#C9A96E" stopOpacity={0} />
+                  <stop offset="5%"  stopColor="#2a7b7b" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#2a7b7b" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey="m" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} tickFormatter={v => `₹${(v/1000).toFixed(0)}k`} />
               <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`₹${v.toLocaleString()}`, 'Revenue']} />
-              <Area type="monotone" dataKey="v" stroke="#C9A96E" strokeWidth={2.5} fill="url(#goldGrad)" dot={{ r: 4, fill: '#C9A96E', strokeWidth: 0 }} />
+              <Area type="monotone" dataKey="v" stroke="#2a7b7b" strokeWidth={2.5} fill="url(#goldGrad)" dot={{ r: 4, fill: '#2a7b7b', strokeWidth: 0 }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -88,11 +88,11 @@ export default function Dashboard() {
           <p className="section-sub mb-4">Units dispatched</p>
           <ResponsiveContainer width="100%" height={210}>
             <BarChart data={orders} barSize={12}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey="m" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="v" name="Orders" fill="#C9A96E" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="v" name="Orders" fill="#2a7b7b" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -109,14 +109,14 @@ export default function Dashboard() {
               return (
                 <div key={p.name}>
                   <div className="flex items-center justify-between text-sm mb-1.5">
-                    <span className="text-gray-300">
+                    <span className="text-gray-600">
                       <span className="text-gray-600 mr-2 font-mono text-xs">{String(i+1).padStart(2,'0')}</span>
                       {p.name}
                     </span>
-                    <span className="text-brand-gold font-semibold">₹{p.revenue.toLocaleString()}</span>
+                    <span className="text-brand font-semibold">₹{p.revenue.toLocaleString()}</span>
                   </div>
-                  <div className="h-1 bg-brand-border rounded-full overflow-hidden">
-                    <div className="h-full bg-brand-gold rounded-full" style={{ width: `${pct}%` }} />
+                  <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-full bg-brand rounded-full" style={{ width: `${pct}%` }} />
                   </div>
                   <p className="text-[11px] text-gray-600 mt-0.5">{p.units} units sold</p>
                 </div>
@@ -145,18 +145,18 @@ export default function Dashboard() {
           <div className="card">
             <div className="flex items-center justify-between mb-3">
               <p className="section-title text-sm">Recent Leads</p>
-              <a href="/leads" className="text-xs text-brand-gold hover:text-brand-gold-light flex items-center gap-0.5">
+              <a href="/leads" className="text-xs text-brand hover:text-brand-light flex items-center gap-0.5">
                 View all <ArrowUpRight size={11} />
               </a>
             </div>
             <div className="space-y-3">
               {recentLeads.map(l => (
                 <div key={l.name} className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-full bg-brand-gold/15 border border-brand-gold/20 flex items-center justify-center text-brand-gold text-xs font-bold shrink-0">
+                  <div className="w-7 h-7 rounded-full bg-brand-100 border border-brand-200 flex items-center justify-center text-brand text-xs font-bold shrink-0">
                     {l.name[0]}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-gray-200 truncate">{l.name}</p>
+                    <p className="text-xs font-medium text-gray-700 truncate">{l.name}</p>
                   </div>
                   <span className={viaBadge[l.via]}>{l.via}</span>
                   <span className={statusBadge[l.status]}>{l.status}</span>

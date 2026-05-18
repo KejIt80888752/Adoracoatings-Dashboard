@@ -37,13 +37,13 @@ export default function Orders() {
     <div className="space-y-5">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { l:'Total Orders',  v:ORDERS.length,                                                              a:'border-brand-gold' },
+          { l:'Total Orders',  v:ORDERS.length,                                                              a:'border-brand' },
           { l:'Delivered',     v:ORDERS.filter(o=>o.status==='Delivered').length,                            a:'border-green-500'  },
           { l:'In Progress',   v:ORDERS.filter(o=>['In Transit','Processing'].includes(o.status)).length,    a:'border-yellow-500' },
           { l:'Pending',       v:ORDERS.filter(o=>o.status==='Pending').length,                              a:'border-red-500'    },
         ].map(c=>(
           <div key={c.l} className={`card border-l-4 ${c.a}`}>
-            <p className="text-2xl font-bold text-white">{c.v}</p>
+            <p className="text-2xl font-bold text-gray-800">{c.v}</p>
             <p className="text-xs text-gray-500 mt-0.5">{c.l}</p>
           </div>
         ))}
@@ -58,7 +58,7 @@ export default function Orders() {
           <div className="flex gap-2 flex-wrap">
             {['All','Delivered','In Transit','Processing','Pending','Cancelled'].map(s=>(
               <button key={s} onClick={()=>setSf(s)}
-                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${sf===s?'bg-brand-gold text-black':'bg-white/5 text-gray-400 hover:bg-white/10'}`}>{s}</button>
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${sf===s?'bg-brand text-white':'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{s}</button>
             ))}
           </div>
           <button className="ml-auto btn-gold flex items-center gap-1.5"><Plus size={13}/>New Order</button>
@@ -72,15 +72,15 @@ export default function Orders() {
             <tbody>
               {list.map(o=>(
                 <tr key={o.id}>
-                  <td><span className="font-mono text-xs font-semibold text-brand-gold">{o.id}</span></td>
-                  <td className="font-medium text-gray-100 whitespace-nowrap">{o.customer}</td>
+                  <td><span className="font-mono text-xs font-semibold text-brand">{o.id}</span></td>
+                  <td className="font-medium text-gray-800 whitespace-nowrap">{o.customer}</td>
                   <td className="text-gray-500 text-xs whitespace-nowrap">{o.date}</td>
                   <td className="text-gray-400">{o.items}</td>
-                  <td className="font-semibold text-brand-gold">₹{o.amount.toLocaleString()}</td>
+                  <td className="font-semibold text-brand">₹{o.amount.toLocaleString()}</td>
                   <td><span className={`${sBadge[o.status]} flex items-center gap-1 w-fit`}>{sIcon[o.status]}{o.status}</span></td>
                   <td><span className={pBadge[o.payment]}>{o.payment}</span></td>
                   <td>
-                    <button className="p-1.5 text-gray-600 hover:text-brand-gold hover:bg-brand-gold/10 rounded-lg transition-colors"><Eye size={13}/></button>
+                    <button className="p-1.5 text-gray-600 hover:text-brand hover:bg-brand-50 rounded-lg transition-colors"><Eye size={13}/></button>
                   </td>
                 </tr>
               ))}

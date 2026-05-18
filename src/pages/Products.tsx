@@ -44,13 +44,13 @@ export default function Products() {
       {/* Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label:'Total SKUs',    val: totals.total,   accent:'border-brand-gold' },
+          { label:'Total SKUs',    val: totals.total,   accent:'border-brand' },
           { label:'In Stock',      val: totals.inStock, accent:'border-blue-500'   },
           { label:'Low Stock',     val: totals.low,     accent:'border-yellow-500' },
           { label:'Out of Stock',  val: totals.out,     accent:'border-red-500'    },
         ].map(c => (
           <div key={c.label} className={`card border-l-4 ${c.accent}`}>
-            <p className="text-2xl font-bold text-white">{c.val}</p>
+            <p className="text-2xl font-bold text-gray-800">{c.val}</p>
             <p className="text-xs text-gray-500 mt-0.5">{c.label}</p>
           </div>
         ))}
@@ -73,7 +73,7 @@ export default function Products() {
             <Filter size={13} className="text-gray-600" />
             {CATS.map(c => (
               <button key={c} onClick={() => setCat(c)}
-                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${cat === c ? 'bg-brand-gold text-black' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'}`}>
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${cat === c ? 'bg-brand text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'}`}>
                 {c}
               </button>
             ))}
@@ -94,7 +94,7 @@ export default function Products() {
               {list.map((p, i) => (
                 <tr key={p.id}>
                   <td className="text-gray-600 text-xs">{i+1}</td>
-                  <td className="font-medium text-gray-100">
+                  <td className="font-medium text-gray-800">
                     <div className="flex items-center gap-2">
                       {p.status === 'Low Stock'    && <AlertTriangle size={12} className="text-yellow-500 shrink-0" />}
                       {p.status === 'Out of Stock' && <Package size={12} className="text-red-400 shrink-0" />}
@@ -103,13 +103,13 @@ export default function Products() {
                   </td>
                   <td><span className="font-mono text-xs text-gray-500">{p.sku}</span></td>
                   <td className="text-gray-400 text-xs">{p.cat}</td>
-                  <td className="font-semibold text-white">{p.stock}</td>
+                  <td className="font-semibold text-gray-800">{p.stock}</td>
                   <td className="text-gray-500">{p.unit}</td>
-                  <td className="text-brand-gold font-medium">₹{p.price.toLocaleString()}</td>
+                  <td className="text-brand font-medium">₹{p.price.toLocaleString()}</td>
                   <td><span className={sColor(p.status)}>{p.status}</span></td>
                   <td>
                     <div className="flex gap-1">
-                      <button className="p-1.5 text-gray-600 hover:text-brand-gold hover:bg-brand-gold/10 rounded-lg transition-colors"><Edit2 size={13} /></button>
+                      <button className="p-1.5 text-gray-600 hover:text-brand hover:bg-brand-50 rounded-lg transition-colors"><Edit2 size={13} /></button>
                       <button className="p-1.5 text-gray-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 size={13} /></button>
                     </div>
                   </td>
@@ -129,8 +129,8 @@ export default function Products() {
       {/* Modal */}
       {modal && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-brand-card border border-brand-border rounded-2xl w-full max-w-md p-6">
-            <h2 className="font-display text-xl font-semibold text-white mb-5">Add New Product</h2>
+          <div className="bg-white border border-gray-100 rounded-2xl w-full max-w-md p-6">
+            <h2 className="font-display text-xl font-semibold text-gray-800 mb-5">Add New Product</h2>
             <div className="space-y-4">
               {['Product Name','SKU','Category','Stock Qty','Unit','Price (₹)'].map(f => (
                 <div key={f}>

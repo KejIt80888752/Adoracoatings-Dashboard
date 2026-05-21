@@ -1,151 +1,152 @@
 import { useState } from 'react'
-import { Search, Plus, Filter, Edit2, Trash2, Package, AlertTriangle, Download } from 'lucide-react'
+import { Search, Package, Download } from 'lucide-react'
 
-const ITEMS = [
-  { id:1,  name:'Metallic Silver Finish',    cat:'Metallic Wall Finishes',    sku:'MWF-001', stock:280, unit:'Kg',    price:1200, min:30, status:'In Stock'     },
-  { id:2,  name:'Metallic Copper Finish',    cat:'Metallic Wall Finishes',    sku:'MWF-002', stock:195, unit:'Kg',    price:1350, min:30, status:'In Stock'     },
-  { id:3,  name:'Metallic Gold Finish',      cat:'Metallic Wall Finishes',    sku:'MWF-003', stock:9,   unit:'Kg',    price:1500, min:20, status:'Low Stock'    },
-  { id:4,  name:'Moroccan Classic',          cat:'Moroccan Wall Finishes',    sku:'MCN-001', stock:320, unit:'Kg',    price:980,  min:40, status:'In Stock'     },
-  { id:5,  name:'Moroccan Desert Sand',      cat:'Moroccan Wall Finishes',    sku:'MCN-002', stock:215, unit:'Kg',    price:1050, min:40, status:'In Stock'     },
-  { id:6,  name:'Greek Lime Plaster',        cat:'Greek Lime Plaster',        sku:'GLP-001', stock:0,   unit:'Kg',    price:760,  min:25, status:'Out of Stock' },
-  { id:7,  name:'Designer Marble Flooring',  cat:'Designer Flooring',         sku:'DF-001',  stock:148, unit:'Sq.m',  price:2200, min:20, status:'In Stock'     },
-  { id:8,  name:'Micro Cement Flooring',     cat:'Designer Flooring',         sku:'DF-002',  stock:92,  unit:'Sq.m',  price:1800, min:15, status:'In Stock'     },
-  { id:9,  name:'Venetian Plaster',          cat:'Decorative Wall Finishes',  sku:'DWF-001', stock:260, unit:'Kg',    price:890,  min:30, status:'In Stock'     },
-  { id:10, name:'Rustic Stone Effect',       cat:'Decorative Wall Finishes',  sku:'DWF-002', stock:18,  unit:'Kg',    price:720,  min:25, status:'Low Stock'    },
-  { id:11, name:'Exterior Smooth Coat',      cat:'Exterior Finishes',         sku:'EF-001',  stock:410, unit:'Litre', price:420,  min:50, status:'In Stock'     },
-  { id:12, name:'Exterior Texture Coat',     cat:'Exterior Finishes',         sku:'EF-002',  stock:280, unit:'Litre', price:480,  min:50, status:'In Stock'     },
-  { id:13, name:'Floor Hardener',            cat:'Floor Finishes',            sku:'FF-001',  stock:75,  unit:'Kg',    price:640,  min:20, status:'In Stock'     },
-  { id:14, name:'Anti-Skid Floor Coat',      cat:'Floor Finishes',            sku:'FF-002',  stock:0,   unit:'Kg',    price:590,  min:15, status:'Out of Stock' },
+type Product = { id: number; name: string; hsn: string; category: string; price: number; unit: string }
+
+const PRODUCTS: Product[] = [
+  // CCTV
+  { id:1,  name:'Hikvision IP 2MP Bullet Camera',        hsn:'85258020', category:'CCTV',              price:1650,  unit:'Nos' },
+  { id:2,  name:'2MP Dome Camera',                       hsn:'85258020', category:'CCTV',              price:2300,  unit:'Nos' },
+  { id:3,  name:'16 Channel NVR',                        hsn:'85219090', category:'CCTV',              price:5400,  unit:'Nos' },
+  { id:4,  name:'CP Plus 16CH NVR UNR-4K2162-V2',        hsn:'85219090', category:'CCTV',              price:6150,  unit:'Nos' },
+  { id:5,  name:'CP Plus 24PORT POE Switch',             hsn:'85176290', category:'CCTV',              price:6500,  unit:'Nos' },
+  { id:6,  name:'4TB Hard Disc (WD)',                    hsn:'84717020', category:'CCTV',              price:6100,  unit:'Nos' },
+  { id:7,  name:'CP Plus 8CH NVR UNR-108F1',             hsn:'85219090', category:'CCTV',              price:3250,  unit:'Nos' },
+  { id:8,  name:'HIKvision 4port POE Switch',            hsn:'85176290', category:'CCTV',              price:2000,  unit:'Nos' },
+  // Fire Extinguishers
+  { id:9,  name:'1 KG ABC Fire Extinguisher',            hsn:'84241000', category:'Fire Extinguisher', price:480,   unit:'Nos' },
+  { id:10, name:'2 KG ABC Fire Extinguisher',            hsn:'84241000', category:'Fire Extinguisher', price:550,   unit:'Nos' },
+  { id:11, name:'4 KG ABC Fire Extinguisher',            hsn:'84241000', category:'Fire Extinguisher', price:750,   unit:'Nos' },
+  { id:12, name:'6 KG ABC Fire Extinguisher',            hsn:'84241000', category:'Fire Extinguisher', price:850,   unit:'Nos' },
+  { id:13, name:'9 KG ABC Fire Extinguisher',            hsn:'84241000', category:'Fire Extinguisher', price:1250,  unit:'Nos' },
+  { id:14, name:'4.5 KG CO2 Fire Extinguisher',         hsn:'84241000', category:'Fire Extinguisher', price:3750,  unit:'Nos' },
+  { id:15, name:'2 KG CO2 Fire Extinguisher',           hsn:'84241000', category:'Fire Extinguisher', price:2200,  unit:'Nos' },
+  { id:16, name:'7 KG Clean Agent Extinguisher',        hsn:'84241000', category:'Fire Extinguisher', price:8200,  unit:'Nos' },
+  // Sprinklers
+  { id:17, name:'Concealed Pendant Sprinkler (68°C)',    hsn:'84248990', category:'Sprinklers',        price:940,   unit:'Nos' },
+  { id:18, name:'Upright Sprinkler TYCO',               hsn:'84248990', category:'Sprinklers',        price:210,   unit:'Nos' },
+  { id:19, name:'Adjustable Rossette Plate',            hsn:'84249000', category:'Sprinklers',        price:40,    unit:'Nos' },
+  { id:20, name:'Rossette Cup',                         hsn:'83024190', category:'Sprinklers',        price:35,    unit:'Nos' },
+  { id:21, name:'Monsher Flexible Dropper 1000MM',      hsn:'83071000', category:'Sprinklers',        price:560,   unit:'Nos' },
+  { id:22, name:'Flexible Hose Unbraided 150MM',        hsn:'83071000', category:'Sprinklers',        price:650,   unit:'Nos' },
+  // Alarm Systems
+  { id:23, name:'Electronic Hooter',                    hsn:'8531',     category:'Alarm Systems',     price:650,   unit:'Nos' },
+  { id:24, name:'12V 7AH Battery EXIDE',                hsn:'85072000', category:'Alarm Systems',     price:900,   unit:'Nos' },
+  { id:25, name:'12V 7.5AH Battery',                    hsn:'85072000', category:'Alarm Systems',     price:990,   unit:'Nos' },
+  { id:26, name:'RE-716 MR Manual Call Point',          hsn:'85319000', category:'Alarm Systems',     price:350,   unit:'Nos' },
+  { id:27, name:'Hooter Cum Strobe',                    hsn:'85311020', category:'Alarm Systems',     price:650,   unit:'Nos' },
+  { id:28, name:'MCP PLASTIC',                          hsn:'85139000', category:'Alarm Systems',     price:300,   unit:'Nos' },
+  { id:29, name:'2 Zone Fire Alarm Panel',              hsn:'85312000', category:'Alarm Systems',     price:4200,  unit:'Nos' },
+  // Fittings
+  { id:30, name:'Double Door Hose Box (600X750X250)',   hsn:'7308',     category:'Fittings',          price:3300,  unit:'Nos' },
+  { id:31, name:'65MM Butterfly Valve UL/FM Tyco',      hsn:'84818090', category:'Fittings',          price:16050, unit:'Nos' },
+  { id:32, name:'50MM Butterfly Valve UL/FM Tyco',      hsn:'84818090', category:'Fittings',          price:16000, unit:'Nos' },
+  { id:33, name:'Fire Blanket (2M x 2M)',               hsn:'70199000', category:'Fittings',          price:1450,  unit:'Nos' },
+  { id:34, name:'GI U Bolt 65MM',                       hsn:'73181500', category:'Fittings',          price:28,    unit:'Nos' },
+  { id:35, name:'Berger Signal Red Paint',              hsn:'32089090', category:'Fittings',          price:275,   unit:'Ltr' },
+  // Signages
+  { id:36, name:'Fire Exit LED Board',                  hsn:'94056090', category:'Signages',          price:2200,  unit:'Nos' },
+  { id:37, name:'Fire Extinguisher Signage Triangle',   hsn:'83100000', category:'Signages',          price:125,   unit:'Nos' },
+  { id:38, name:'Fire Order Board A2 Size',             hsn:'83100000', category:'Signages',          price:500,   unit:'Nos' },
+  { id:39, name:'Exit Signage 12"x4" Photoluminescent', hsn:'83100000', category:'Signages',          price:180,   unit:'Nos' },
+  { id:40, name:'First Aid Box With Content (Metallic)',hsn:'30065000', category:'Signages',          price:1600,  unit:'Nos' },
+  // Pumps & Panel
+  { id:41, name:'Kirloskar KDI 538+ 5HP Pumpset',      hsn:'84137000', category:'Pumps & Panel',     price:23729, unit:'Nos' },
+  { id:42, name:'Kirloskar KDI 335++ 3HP Pumpset',     hsn:'84137000', category:'Pumps & Panel',     price:18644, unit:'Nos' },
 ]
 
-const CATS = ['All', 'Metallic Wall Finishes', 'Moroccan Wall Finishes', 'Greek Lime Plaster', 'Designer Flooring', 'Decorative Wall Finishes', 'Exterior Finishes', 'Floor Finishes']
-
-const sColor = (s: string) => s === 'In Stock' ? 'badge-green' : s === 'Low Stock' ? 'badge-yellow' : 'badge-red'
+const CATEGORIES = ['All', 'CCTV', 'Fire Extinguisher', 'Sprinklers', 'Alarm Systems', 'Fittings', 'Signages', 'Pumps & Panel']
+const catBadge: Record<string, string> = {
+  'CCTV': 'badge-blue', 'Fire Extinguisher': 'badge-red', 'Sprinklers': 'badge-blue',
+  'Alarm Systems': 'badge-yellow', 'Fittings': 'badge-gray', 'Signages': 'badge-green', 'Pumps & Panel': 'badge-gold',
+}
 
 export default function Products() {
-  const [search, setSearch] = useState('')
-  const [cat, setCat]       = useState('All')
-  const [modal, setModal]   = useState(false)
+  const [search, setSearch]   = useState('')
+  const [cat, setCat]         = useState('All')
 
-  const list = ITEMS.filter(p =>
-    (cat === 'All' || p.cat === cat) &&
-    (p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()))
+  const filtered = PRODUCTS.filter(p =>
+    (cat === 'All' || p.category === cat) &&
+    (p.name.toLowerCase().includes(search.toLowerCase()) || p.hsn.includes(search))
   )
 
-  const totals = {
-    total: ITEMS.length,
-    inStock: ITEMS.filter(p => p.status === 'In Stock').length,
-    low:     ITEMS.filter(p => p.status === 'Low Stock').length,
-    out:     ITEMS.filter(p => p.status === 'Out of Stock').length,
-  }
-
   return (
-    <div className="space-y-5">
-      {/* Summary */}
+    <div className="space-y-4">
+
+      {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label:'Total SKUs',    val: totals.total,   accent:'border-brand' },
-          { label:'In Stock',      val: totals.inStock, accent:'border-blue-500'   },
-          { label:'Low Stock',     val: totals.low,     accent:'border-yellow-500' },
-          { label:'Out of Stock',  val: totals.out,     accent:'border-red-500'    },
-        ].map(c => (
-          <div key={c.label} className={`card border-l-4 ${c.accent}`}>
-            <p className="text-2xl font-bold text-gray-800">{c.val}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{c.label}</p>
-          </div>
-        ))}
+        {CATEGORIES.slice(1).map(c => {
+          const count = PRODUCTS.filter(p => p.category === c).length
+          return (
+            <button key={c} onClick={() => setCat(cat === c ? 'All' : c)}
+              className={`card-sm text-left transition-all hover:border-brand/40 ${cat === c ? 'border-brand bg-brand/5' : ''}`}>
+              <p className="text-xs text-gray-400 font-medium truncate">{c}</p>
+              <p className={`text-lg font-bold mt-0.5 ${cat === c ? 'text-brand' : 'text-gray-700'}`}>{count}</p>
+              <p className="text-[10px] text-gray-400">products</p>
+            </button>
+          )
+        })}
       </div>
 
       {/* Toolbar */}
-      <div className="card">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap gap-2 items-center">
-            <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products or SKU..." className="input-dark pl-9 w-64" />
-            </div>
-            <div className="ml-auto flex gap-2">
-              <button className="btn-outline-gold flex items-center gap-1.5"><Download size={13} />Export</button>
-              <button onClick={() => setModal(true)} className="btn-gold flex items-center gap-1.5"><Plus size={13} />Add Product</button>
-            </div>
+      <div className="card p-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <div className="relative flex-1 w-full">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search products or HSN code…"
+              className="input-dark pl-9 w-full" />
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <Filter size={13} className="text-gray-600" />
-            {CATS.map(c => (
+            {CATEGORIES.map(c => (
               <button key={c} onClick={() => setCat(c)}
-                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${cat === c ? 'bg-brand text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'}`}>
-                {c}
-              </button>
+                className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all border ${
+                  cat === c ? 'bg-brand text-white border-brand' : 'border-gray-200 text-gray-500 hover:border-brand/40 hover:text-brand'
+                }`}>{c}</button>
             ))}
           </div>
+          <button className="btn-gold flex items-center gap-1.5 text-xs shrink-0">
+            <Download size={13} /> Export
+          </button>
         </div>
+        <p className="text-xs text-gray-400 mt-2">{filtered.length} of {PRODUCTS.length} products</p>
       </div>
 
       {/* Table */}
-      <div className="card !p-0 overflow-hidden">
+      <div className="card p-0 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full tbl">
+          <table className="tbl w-full">
             <thead>
               <tr>
-                {['#','Product','SKU','Category','Stock','Unit','Price (₹)','Status','Actions'].map(h => <th key={h}>{h}</th>)}
+                <th className="w-10">#</th>
+                <th>Product Name</th>
+                <th>Category</th>
+                <th>HSN Code</th>
+                <th className="text-right">Purchase Price</th>
+                <th>Unit</th>
               </tr>
             </thead>
             <tbody>
-              {list.map((p, i) => (
+              {filtered.length === 0 && (
+                <tr><td colSpan={6} className="text-center py-10 text-gray-400">
+                  <Package size={32} className="mx-auto mb-2 opacity-30" />
+                  No products found
+                </td></tr>
+              )}
+              {filtered.map((p, i) => (
                 <tr key={p.id}>
-                  <td className="text-gray-600 text-xs">{i+1}</td>
-                  <td className="font-medium text-gray-800">
-                    <div className="flex items-center gap-2">
-                      {p.status === 'Low Stock'    && <AlertTriangle size={12} className="text-yellow-500 shrink-0" />}
-                      {p.status === 'Out of Stock' && <Package size={12} className="text-red-400 shrink-0" />}
-                      {p.name}
-                    </div>
-                  </td>
-                  <td><span className="font-mono text-xs text-gray-500">{p.sku}</span></td>
-                  <td className="text-gray-400 text-xs">{p.cat}</td>
-                  <td className="font-semibold text-gray-800">{p.stock}</td>
+                  <td className="text-gray-400 font-mono text-xs">{String(i+1).padStart(2,'0')}</td>
+                  <td className="font-medium text-gray-700">{p.name}</td>
+                  <td><span className={catBadge[p.category] ?? 'badge-gray'}>{p.category}</span></td>
+                  <td className="font-mono text-xs text-gray-500">{p.hsn || '—'}</td>
+                  <td className="text-right font-semibold text-brand">₹{p.price.toLocaleString('en-IN')}</td>
                   <td className="text-gray-500">{p.unit}</td>
-                  <td className="text-brand font-medium">₹{p.price.toLocaleString()}</td>
-                  <td><span className={sColor(p.status)}>{p.status}</span></td>
-                  <td>
-                    <div className="flex gap-1">
-                      <button className="p-1.5 text-gray-600 hover:text-brand hover:bg-brand-50 rounded-lg transition-colors"><Edit2 size={13} /></button>
-                      <button className="p-1.5 text-gray-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 size={13} /></button>
-                    </div>
-                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {!list.length && (
-            <div className="text-center py-12 text-gray-600">
-              <Package size={28} className="mx-auto mb-2 opacity-30" />
-              <p className="text-sm">No products found</p>
-            </div>
-          )}
         </div>
       </div>
-
-      {/* Modal */}
-      {modal && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-100 rounded-2xl w-full max-w-md p-6">
-            <h2 className="font-display text-xl font-semibold text-gray-800 mb-5">Add New Product</h2>
-            <div className="space-y-4">
-              {['Product Name','SKU','Category','Stock Qty','Unit','Price (₹)'].map(f => (
-                <div key={f}>
-                  <label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-wider">{f}</label>
-                  <input className="input-dark" placeholder={`Enter ${f.toLowerCase()}`} />
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => setModal(false)} className="flex-1 btn-outline-gold">Cancel</button>
-              <button className="flex-1 btn-gold">Add Product</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

@@ -1,98 +1,448 @@
-const PROJECTS = [
-  { sl:1,  name:'SKYLINE CITY TOWER',       date:'07-Sep-23', inv:'AFS/INV/2324/063', base:10180,    gst:1832.40,   total:12012.40,  rcvd:12012,    pending:0.40   },
-  { sl:2,  name:'LAMY STORE',               date:'22-Oct-23', inv:'AFS/PI/2324/30',   base:241492,   gst:43468.56,  total:284960.56, rcvd:285000,   pending:-39.44 },
-  { sl:3,  name:'G P SPORTS & INFRA',       date:'11-Sep-23', inv:'AFS/INV/2324/069', base:202300,   gst:36414,     total:238714,    rcvd:238038,   pending:676    },
-  { sl:4,  name:'STREAMLINE FITNESS',       date:'05-Sep-23', inv:'AFS/INV/2324/062', base:166964,   gst:30053.52,  total:197017.52, rcvd:197018,   pending:-0.48  },
-  { sl:5,  name:'SHUBHARAM COMPLEX',        date:'13-Nov-23', inv:'AFS/INV/2324/093', base:724223.5, gst:130360.23, total:854583.73, rcvd:943273,   pending:-88689 },
-  { sl:6,  name:'MALNAD ARCADE',            date:'04-Aug-23', inv:'AFS/INV/2324/052', base:26300,    gst:4734,      total:31034,     rcvd:31034,    pending:0      },
-  { sl:7,  name:'ARUN EDUFUN',              date:'21-Aug-23', inv:'AFS/QTN/2324/057', base:23340,    gst:4201.20,   total:27541.20,  rcvd:23000,    pending:340    },
-  { sl:8,  name:'ANANT CARS AUTO PVT LTD', date:'17-Aug-23', inv:'AFS/INV/2324/054', base:59299,    gst:10673.82,  total:69972.82,  rcvd:69943,    pending:29.82  },
-  { sl:9,  name:'ARYAN INTERIORS',          date:'31-Aug-23', inv:'AFS/INV/2324/058', base:19950,    gst:3591,      total:23541,     rcvd:23424,    pending:117    },
-  { sl:10, name:'ARYAN INTERIORS - TN',     date:'31-Aug-23', inv:'AFS/INV/2324/057', base:83065,    gst:14951.70,  total:98016.70,  rcvd:97970,    pending:46.70  },
-  { sl:11, name:'GODREJ GOLD COUNTY',       date:'11-Sep-23', inv:'AFS/INV/2324/065', base:18100,    gst:3258,      total:21358,     rcvd:21177,    pending:181    },
-  { sl:12, name:'SRIKAKULAM APARTMENT',     date:'12-Oct-23', inv:'AFS/PI/2324/27',   base:75181,    gst:13532.58,  total:88713.58,  rcvd:88731,    pending:-17.42 },
-  { sl:13, name:'SQUIRE HWFS',              date:'19-Oct-23', inv:'AFS/INV/2324/084', base:12980,    gst:2336.40,   total:15316.40,  rcvd:15316,    pending:0.40   },
-  { sl:14, name:'PURVA SKYWOOD',            date:'30-Oct-23', inv:'AFS/PI/2324/31',   base:55100,    gst:9918,      total:65018,     rcvd:65018,    pending:0      },
-  { sl:15, name:'PNG HEALTHCARE',           date:'03-Nov-23', inv:'AFS/INV/2324/089', base:10010,    gst:1801.80,   total:11811.80,  rcvd:11811.8,  pending:0      },
-  { sl:16, name:'YUKI PAN ASIAN',           date:'03-Nov-23', inv:'AFS/INV/2324/086', base:16300,    gst:2934,      total:19234,     rcvd:11811.8,  pending:0      },
-  { sl:17, name:'POWER PLUS ENTERPRISES',   date:'07-Nov-23', inv:'AFS/INV/2324/092', base:13100,    gst:2358,      total:15458,     rcvd:15458,    pending:0      },
-]
+import { useState } from 'react'
+import { Plus, Trash2, Printer, Mail, Save, FileText, List } from 'lucide-react'
 
-const fmt = (n: number) => '₹' + n.toLocaleString('en-IN')
+type Item = { id: number; code: string; description: string; hsn: string; qty: number; unit: string; rate: number; disc: number; gstPct: number }
+type Tab = 'invoice' | 'challan' | 'list'
 
-function balanceClass(bal: number): string {
-  if (Math.abs(bal) < 1) return 'text-green-600 font-semibold'
-  if (bal > 0 && bal < 500) return 'text-yellow-600 font-semibold'
-  if (bal < -100) return 'text-red-600 font-semibold'
-  return 'text-yellow-600 font-semibold'
+const UNITS = ['Nos', 'Mtr', 'Kg', 'Ltr', 'Set', 'Pair', 'Box', 'Roll']
+const GST_RATES = [0, 5, 12, 18, 28]
+const STATES = ['Tamil Nadu', 'Karnataka', 'Maharashtra', 'Delhi', 'Telangana', 'Kerala', 'Andhra Pradesh', 'Gujarat']
+
+const PRODUCT_CODES: Record<string, { description: string; hsn: string; rate: number; gstPct: number }> = {
+  'AC001': { description: 'Metallic Wall Finish (per litre)',        hsn: '32081090', rate: 850,   gstPct: 18 },
+  'AC002': { description: 'Moroccan Wall Plaster (per kg)',         hsn: '32081090', rate: 1200,  gstPct: 18 },
+  'AC003': { description: 'Decorative Wall Texture (per litre)',    hsn: '32081090', rate: 650,   gstPct: 18 },
+  'AC004': { description: 'Exterior Weatherproof Paint (per litre)',hsn: '32081010', rate: 480,   gstPct: 18 },
+  'AC005': { description: 'Designer Epoxy Flooring (per sqft)',     hsn: '32082090', rate: 180,   gstPct: 18 },
+  'AC006': { description: 'Venetian Plaster (per kg)',              hsn: '32089090', rate: 1500,  gstPct: 18 },
+  'AC007': { description: 'Primer Coat (per litre)',                hsn: '32081010', rate: 220,   gstPct: 18 },
+  'AC008': { description: 'Texture Sand Finish (per bag 25kg)',     hsn: '32089090', rate: 900,   gstPct: 18 },
 }
 
-export default function BillingInvoice() {
-  const totalInvoiced  = PROJECTS.reduce((s, p) => s + p.total, 0)
-  const totalCollected = PROJECTS.reduce((s, p) => s + p.rcvd,  0)
-  const totalBalance   = PROJECTS.reduce((s, p) => s + p.pending, 0)
+let nextInvNum = 60
+const getInvNo = () => `AFS/INV/${String(nextInvNum++).padStart(4,'0')}/2025-26`
+const today = new Date().toISOString().split('T')[0]
+
+function newItem(id: number): Item {
+  return { id, code: '', description: '', hsn: '', qty: 1, unit: 'Nos', rate: 0, disc: 0, gstPct: 18 }
+}
+
+// ── Invoice Form ─────────────────────────────────────────────────────────────
+function InvoiceForm() {
+  const [invNo]            = useState(getInvNo)
+  const [invDate, setInvDate] = useState(today)
+  const [state, setState]  = useState('Tamil Nadu')
+  const [party, setParty]  = useState('')
+  const [gstin, setGstin]  = useState('')
+  const [addr, setAddr]    = useState('')
+  const [items, setItems]  = useState<Item[]>([newItem(1)])
+  const [nextId, setNextId]= useState(2)
+  const [saved, setSaved]  = useState(false)
+
+  const addItem = () => { setItems(p => [...p, newItem(nextId)]); setNextId(n => n + 1) }
+  const removeItem = (id: number) => setItems(p => p.filter(i => i.id !== id))
+
+  const updateItem = (id: number, field: keyof Item, value: string | number) => {
+    setItems(p => p.map(item => {
+      if (item.id !== id) return item
+      const updated = { ...item, [field]: value }
+      if (field === 'code') {
+        const prod = PRODUCT_CODES[String(value).toUpperCase()]
+        if (prod) return { ...updated, description: prod.description, hsn: prod.hsn, rate: prod.rate, gstPct: prod.gstPct }
+      }
+      return updated
+    }))
+  }
+
+  const taxable   = (it: Item) => { const base = it.qty * it.rate * (1 - it.disc / 100); return Math.round(base * 100) / 100 }
+  const gstAmt    = (it: Item) => Math.round(taxable(it) * it.gstPct) / 100
+  const rowTotal  = (it: Item) => taxable(it) + gstAmt(it)
+  const totalTax  = items.reduce((s, i) => s + taxable(i), 0)
+  const totalGst  = items.reduce((s, i) => s + gstAmt(i), 0)
+  const grandTotal= totalTax + totalGst
+  const interState= state !== 'Tamil Nadu'
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="section-title">Billing &amp; Invoices</h1>
-        <p className="section-sub">Invoice register — FY 2023-24</p>
-      </div>
+    <div className="space-y-4">
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="card-sm">
-          <div className="text-xs text-gray-500 mb-1">Total Invoiced</div>
-          <div className="text-2xl font-bold text-brand">{fmt(totalInvoiced)}</div>
+      {/* Invoice header */}
+      <div className="card space-y-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Invoice No</label>
+            <div className="input-dark bg-gray-50 text-gray-500 text-sm font-mono">{invNo}</div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Invoice Date</label>
+            <input type="date" value={invDate} onChange={e => setInvDate(e.target.value)} className="input-dark" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Place of Supply</label>
+            <select value={state} onChange={e => setState(e.target.value)} className="input-dark">
+              {STATES.map(s => <option key={s}>{s}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">GST Type</label>
+            <div className={`input-dark bg-gray-50 text-sm font-semibold ${interState ? 'text-orange-600' : 'text-brand'}`}>
+              {interState ? 'IGST (Inter-State)' : 'CGST + SGST (Intra-State)'}
+            </div>
+          </div>
         </div>
-        <div className="card-sm">
-          <div className="text-xs text-gray-500 mb-1">Total Collected</div>
-          <div className="text-2xl font-bold text-green-600">{fmt(totalCollected)}</div>
-        </div>
-        <div className="card-sm">
-          <div className="text-xs text-gray-500 mb-1">Balance Outstanding</div>
-          <div className={`text-2xl font-bold ${totalBalance > 0 ? 'text-red-500' : 'text-green-600'}`}>
-            {fmt(Math.abs(totalBalance))}
-            {totalBalance < 0 && <span className="text-xs font-normal text-gray-400 ml-1">(excess rcvd)</span>}
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Party Name <span className="text-red-500">*</span></label>
+            <input value={party} onChange={e => setParty(e.target.value)}
+              placeholder="Customer / Company name" className="input-dark" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">GSTIN</label>
+            <input value={gstin} onChange={e => setGstin(e.target.value.toUpperCase())}
+              placeholder="29XXXXXXXXXX1ZX" maxLength={15} className="input-dark font-mono" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Billing Address</label>
+            <input value={addr} onChange={e => setAddr(e.target.value)}
+              placeholder="Full address with city & pin" className="input-dark" />
           </div>
         </div>
       </div>
 
-      <div className="card overflow-x-auto">
-        <h2 className="font-semibold text-gray-700 mb-4">Invoice Details</h2>
-        <table className="tbl">
-          <thead>
-            <tr>
-              <th>Invoice #</th><th>Project</th><th>Date</th>
-              <th>Base Value</th><th>GST</th><th>Invoice Total</th>
-              <th>Amount Received</th><th>Balance</th>
-            </tr>
-          </thead>
-          <tbody>
-            {PROJECTS.map(p => (
-              <tr key={p.sl}>
-                <td className="text-xs font-mono text-gray-500">{p.inv}</td>
-                <td className="font-medium">{p.name}</td>
-                <td className="text-gray-500">{p.date}</td>
-                <td>{fmt(p.base)}</td>
-                <td className="text-gray-500">{fmt(p.gst)}</td>
-                <td className="font-semibold">{fmt(p.total)}</td>
-                <td className="text-green-700">{fmt(p.rcvd)}</td>
-                <td className={balanceClass(p.pending)}>{fmt(p.pending)}</td>
+      {/* Item details */}
+      <div className="card p-0 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+          <p className="font-semibold text-gray-700 text-sm">Item Details</p>
+          <p className="text-xs text-gray-400">Type product code (AC001–AC008) to auto-fill</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100">
+                {['Code','Description','HSN','Qty','Unit','Rate (₹)','Disc%','GST%','Taxable','GST Amt','Total',''].map(h => (
+                  <th key={h} className="text-left text-xs font-semibold text-gray-500 px-3 py-2.5 whitespace-nowrap">{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="bg-gray-50 font-bold">
-              <td colSpan={3} className="text-right text-gray-600 pr-4">Totals</td>
-              <td>{fmt(PROJECTS.reduce((s,p)=>s+p.base,0))}</td>
-              <td>{fmt(PROJECTS.reduce((s,p)=>s+p.gst,0))}</td>
-              <td className="text-brand">{fmt(totalInvoiced)}</td>
-              <td className="text-green-700">{fmt(totalCollected)}</td>
-              <td className={totalBalance >= 0 ? 'text-red-600' : 'text-green-600'}>{fmt(totalBalance)}</td>
-            </tr>
-          </tfoot>
-        </table>
+            </thead>
+            <tbody>
+              {items.map(item => (
+                <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50/50">
+                  <td className="px-2 py-2 w-20">
+                    <input value={item.code} onChange={e => updateItem(item.id,'code',e.target.value.toUpperCase())}
+                      placeholder="AC001" className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-none focus:border-brand" />
+                  </td>
+                  <td className="px-2 py-2 min-w-[180px]">
+                    <input value={item.description} onChange={e => updateItem(item.id,'description',e.target.value)}
+                      placeholder="Item description" className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand" />
+                  </td>
+                  <td className="px-2 py-2 w-24">
+                    <input value={item.hsn} onChange={e => updateItem(item.id,'hsn',e.target.value)}
+                      placeholder="HSN" className="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-none focus:border-brand" />
+                  </td>
+                  <td className="px-2 py-2 w-16">
+                    <input type="number" min={1} value={item.qty} onChange={e => updateItem(item.id,'qty',+e.target.value)}
+                      className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none focus:border-brand" />
+                  </td>
+                  <td className="px-2 py-2 w-20">
+                    <select value={item.unit} onChange={e => updateItem(item.id,'unit',e.target.value)}
+                      className="w-20 border border-gray-200 rounded-lg px-1.5 py-1.5 text-xs focus:outline-none focus:border-brand">
+                      {UNITS.map(u => <option key={u}>{u}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-2 py-2 w-24">
+                    <input type="number" min={0} value={item.rate} onChange={e => updateItem(item.id,'rate',+e.target.value)}
+                      className="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-right focus:outline-none focus:border-brand" />
+                  </td>
+                  <td className="px-2 py-2 w-16">
+                    <input type="number" min={0} max={100} value={item.disc} onChange={e => updateItem(item.id,'disc',+e.target.value)}
+                      className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none focus:border-brand" />
+                  </td>
+                  <td className="px-2 py-2 w-20">
+                    <select value={item.gstPct} onChange={e => updateItem(item.id,'gstPct',+e.target.value)}
+                      className="w-20 border border-gray-200 rounded-lg px-1.5 py-1.5 text-xs focus:outline-none focus:border-brand">
+                      {GST_RATES.map(r => <option key={r} value={r}>{r}%</option>)}
+                    </select>
+                  </td>
+                  <td className="px-3 py-2 text-right text-gray-600 font-medium whitespace-nowrap">₹{taxable(item).toLocaleString('en-IN')}</td>
+                  <td className="px-3 py-2 text-right text-gray-500 whitespace-nowrap">₹{gstAmt(item).toLocaleString('en-IN')}</td>
+                  <td className="px-3 py-2 text-right font-semibold text-brand whitespace-nowrap">₹{rowTotal(item).toLocaleString('en-IN')}</td>
+                  <td className="px-2 py-2">
+                    {items.length > 1 && (
+                      <button onClick={() => removeItem(item.id)} className="text-gray-300 hover:text-red-400 transition-colors p-1">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="px-4 py-3 border-t border-gray-100">
+          <button onClick={addItem} className="flex items-center gap-1.5 text-brand text-xs font-semibold hover:bg-brand/5 px-3 py-1.5 rounded-lg transition-colors">
+            <Plus size={13} /> Add Item
+          </button>
+        </div>
+
+        {/* Totals */}
+        <div className="border-t border-gray-100 px-5 py-4">
+          <div className="flex justify-end">
+            <div className="w-72 space-y-2">
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Taxable Amount</span>
+                <span className="font-medium">₹{totalTax.toLocaleString('en-IN')}</span>
+              </div>
+              {interState ? (
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>IGST</span>
+                  <span>₹{totalGst.toLocaleString('en-IN')}</span>
+                </div>
+              ) : (
+                <>
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>CGST</span>
+                    <span>₹{(totalGst/2).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>SGST</span>
+                    <span>₹{(totalGst/2).toLocaleString('en-IN')}</span>
+                  </div>
+                </>
+              )}
+              <div className="flex justify-between font-bold text-base pt-2 border-t border-gray-200">
+                <span>Grand Total</span>
+                <span className="text-brand text-lg">₹{grandTotal.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Action bar */}
+      <div className="flex items-center justify-between py-2">
+        <button onClick={() => { setItems([newItem(1)]); setNextId(2); setParty(''); setGstin(''); setAddr(''); setSaved(false) }}
+          className="btn-ghost text-sm">Clear</button>
+        <div className="flex items-center gap-2">
+          <button className="btn-outline-gold flex items-center gap-1.5 text-sm">
+            <Printer size={14} /> Preview & Print
+          </button>
+          <button onClick={() => setSaved(true)}
+            className="btn-gold flex items-center gap-1.5 text-sm">
+            <Save size={14} /> {saved ? 'Saved ✓' : 'Save Invoice'}
+          </button>
+          <button className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white font-semibold transition-colors">
+            <Mail size={14} /> Save & Email
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Challan Form ──────────────────────────────────────────────────────────────
+function ChallanForm() {
+  const [challanNo]        = useState('AFS/CH/0012/2025-26')
+  const [challanDate, setChallanDate] = useState(today)
+  const [party, setParty]  = useState('')
+  const [vehicle, setVehicle] = useState('')
+  const [items, setItems]  = useState<Item[]>([newItem(1)])
+  const [nextId, setNextId]= useState(2)
+
+  const addItem = () => { setItems(p => [...p, newItem(nextId)]); setNextId(n => n + 1) }
+  const removeItem = (id: number) => setItems(p => p.filter(i => i.id !== id))
+  const updateItem = (id: number, field: keyof Item, value: string | number) => {
+    setItems(p => p.map(it => it.id !== id ? it : { ...it, [field]: value }))
+  }
+  const totalQty = items.reduce((s, i) => s + i.qty, 0)
+
+  return (
+    <div className="space-y-4">
+      <div className="card space-y-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Challan No</label>
+            <div className="input-dark bg-gray-50 text-gray-500 text-sm font-mono">{challanNo}</div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Challan Date</label>
+            <input type="date" value={challanDate} onChange={e => setChallanDate(e.target.value)} className="input-dark" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Party Name <span className="text-red-500">*</span></label>
+            <input value={party} onChange={e => setParty(e.target.value)} placeholder="Customer / Site name" className="input-dark" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Vehicle No</label>
+            <input value={vehicle} onChange={e => setVehicle(e.target.value.toUpperCase())} placeholder="TN 01 AB 1234" className="input-dark font-mono" />
+          </div>
+        </div>
+      </div>
+
+      <div className="card p-0 overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+          <p className="font-semibold text-gray-700 text-sm">Goods Dispatched</p>
+          <p className="text-xs text-gray-400">Delivery Challan</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100">
+                {['#','Product Code','Description','HSN','Qty','Unit','Rate (₹)','Amount',''].map(h => (
+                  <th key={h} className="text-left text-xs font-semibold text-gray-500 px-3 py-2.5 whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item, idx) => (
+                <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50/50">
+                  <td className="px-3 py-2 text-gray-400 text-xs">{idx+1}</td>
+                  <td className="px-2 py-2 w-24">
+                    <input value={item.code} onChange={e => updateItem(item.id,'code',e.target.value.toUpperCase())}
+                      placeholder="AC001" className="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-none focus:border-brand" />
+                  </td>
+                  <td className="px-2 py-2 min-w-[200px]">
+                    <input value={item.description} onChange={e => updateItem(item.id,'description',e.target.value)}
+                      placeholder="Item description" className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand" />
+                  </td>
+                  <td className="px-2 py-2 w-24">
+                    <input value={item.hsn} onChange={e => updateItem(item.id,'hsn',e.target.value)}
+                      placeholder="HSN" className="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-none focus:border-brand" />
+                  </td>
+                  <td className="px-2 py-2 w-16">
+                    <input type="number" min={1} value={item.qty} onChange={e => updateItem(item.id,'qty',+e.target.value)}
+                      className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none focus:border-brand" />
+                  </td>
+                  <td className="px-2 py-2 w-20">
+                    <select value={item.unit} onChange={e => updateItem(item.id,'unit',e.target.value)}
+                      className="w-20 border border-gray-200 rounded-lg px-1.5 py-1.5 text-xs focus:outline-none focus:border-brand">
+                      {UNITS.map(u => <option key={u}>{u}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-2 py-2 w-24">
+                    <input type="number" min={0} value={item.rate} onChange={e => updateItem(item.id,'rate',+e.target.value)}
+                      className="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-right focus:outline-none focus:border-brand" />
+                  </td>
+                  <td className="px-3 py-2 text-right font-semibold text-brand whitespace-nowrap">
+                    ₹{(item.qty * item.rate).toLocaleString('en-IN')}
+                  </td>
+                  <td className="px-2 py-2">
+                    {items.length > 1 && (
+                      <button onClick={() => removeItem(item.id)} className="text-gray-300 hover:text-red-400 p-1 transition-colors">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
+          <button onClick={addItem} className="flex items-center gap-1.5 text-brand text-xs font-semibold hover:bg-brand/5 px-3 py-1.5 rounded-lg transition-colors">
+            <Plus size={13} /> Add Item
+          </button>
+          <div className="text-sm text-gray-500">
+            Total Qty: <span className="font-semibold text-gray-700">{totalQty}</span> &nbsp;|&nbsp;
+            Total Amount: <span className="font-semibold text-brand">₹{items.reduce((s,i)=>s+i.qty*i.rate,0).toLocaleString('en-IN')}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between py-2">
+        <button onClick={() => { setItems([newItem(1)]); setNextId(2); setParty(''); setVehicle('') }}
+          className="btn-ghost text-sm">Clear</button>
+        <div className="flex gap-2">
+          <button className="btn-outline-gold flex items-center gap-1.5 text-sm"><Printer size={14} /> Print Challan</button>
+          <button className="btn-gold flex items-center gap-1.5 text-sm"><Save size={14} /> Save Challan</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Invoice List ──────────────────────────────────────────────────────────────
+const SAVED = [
+  { inv:'AFS/INV/2324/063', party:'SKYLINE CITY TOWER',  date:'07-Sep-23', total:12012,  status:'Paid'    },
+  { inv:'AFS/PI/2324/30',   party:'LAMY STORE',          date:'22-Oct-23', total:284960, status:'Paid'    },
+  { inv:'AFS/INV/2324/069', party:'G P SPORTS & INFRA',  date:'11-Sep-23', total:238714, status:'Pending' },
+  { inv:'AFS/INV/2324/062', party:'STREAMLINE FITNESS',  date:'05-Sep-23', total:197017, status:'Paid'    },
+  { inv:'AFS/INV/2324/093', party:'SHUBHARAM COMPLEX',   date:'13-Nov-23', total:854583, status:'Paid'    },
+  { inv:'AFS/INV/2324/052', party:'MALNAD ARCADE',       date:'04-Aug-23', total:31034,  status:'Paid'    },
+  { inv:'AFS/QTN/2324/057', party:'ARUN EDUFUN',         date:'21-Aug-23', total:27541,  status:'Pending' },
+  { inv:'AFS/INV/2324/086', party:'YUKI PAN ASIAN',      date:'03-Nov-23', total:19234,  status:'Pending' },
+]
+
+function InvoiceList({ onNew }: { onNew: () => void }) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div><p className="text-sm text-gray-500">Showing {SAVED.length} invoices</p></div>
+        <button onClick={onNew} className="btn-gold flex items-center gap-1.5 text-sm"><Plus size={13} /> New Tax Invoice</button>
+      </div>
+      <div className="card p-0 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="tbl w-full">
+            <thead><tr><th>Invoice #</th><th>Party</th><th>Date</th><th className="text-right">Amount</th><th>Status</th></tr></thead>
+            <tbody>
+              {SAVED.map(r => (
+                <tr key={r.inv}>
+                  <td className="font-mono text-xs text-brand">{r.inv}</td>
+                  <td className="font-medium text-gray-700">{r.party}</td>
+                  <td className="text-gray-500 text-xs">{r.date}</td>
+                  <td className="text-right font-semibold text-gray-700">₹{r.total.toLocaleString('en-IN')}</td>
+                  <td><span className={r.status === 'Paid' ? 'badge-green' : 'badge-yellow'}>{r.status}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
+export default function BillingInvoice() {
+  const [tab, setTab] = useState<Tab>('invoice')
+
+  const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
+    { key: 'invoice', label: 'Invoice',          icon: <FileText size={14} /> },
+    { key: 'challan', label: 'Challan',          icon: <FileText size={14} /> },
+    { key: 'list',    label: 'Tax Invoice List', icon: <List     size={14} /> },
+  ]
+
+  return (
+    <div className="space-y-4">
+
+      {/* Page header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-gray-800">
+            Billing — {tab === 'invoice' ? 'Tax Invoice' : tab === 'challan' ? 'Delivery Challan' : 'Invoice List'}
+          </h1>
+          <p className="text-xs text-gray-400 mt-0.5">GST Tax Invoice — Tally style</p>
+        </div>
+        <div className="flex gap-1.5 bg-gray-100 p-1 rounded-xl">
+          {tabs.map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+                tab === t.key ? 'bg-white text-brand shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}>
+              {t.icon} {t.label}
+            </button>
+          ))}
+          {tab !== 'list' && (
+            <button onClick={() => setTab('list')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-brand text-white hover:bg-brand-dark transition-all">
+              <Plus size={13} /> New Tax Invoice
+            </button>
+          )}
+        </div>
+      </div>
+
+      {tab === 'invoice' && <InvoiceForm />}
+      {tab === 'challan' && <ChallanForm />}
+      {tab === 'list'    && <InvoiceList onNew={() => setTab('invoice')} />}
     </div>
   )
 }

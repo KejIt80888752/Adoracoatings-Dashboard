@@ -4,13 +4,21 @@ import Sidebar from './Sidebar'
 import Topbar from './Topbar'
 
 const TITLES: Record<string, string> = {
-  '/':          'Dashboard',
-  '/products':  'Products',
-  '/portfolio': 'Portfolio',
-  '/leads':     'Lead Generation',
-  '/orders':    'Orders',
-  '/reports':   'Reports',
-  '/settings':  'Settings',
+  '/':                  'Dashboard',
+  '/products':          'Products & Inventory',
+  '/portfolio':         'Portfolio',
+  '/quotation':         'Quotation',
+  '/billing':           'Billing / Invoice',
+  '/leads':             'Lead Generation',
+  '/sales-reports':     'Sales Reports',
+  '/purchase-reports':  'Purchase Reports',
+  '/outstanding':       'Outstanding',
+  '/profit-loss':       'Profit & Loss',
+  '/gst-reports':       'GST Reports',
+  '/user-management':   'User Management',
+  '/orders':            'Orders',
+  '/reports':           'Reports',
+  '/settings':          'Settings',
 }
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {

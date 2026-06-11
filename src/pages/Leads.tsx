@@ -1,13 +1,17 @@
 import { useState } from 'react'
-import { Plus, Search, Mail, MessageCircle, Phone, Send, Clock, CheckCheck, Filter, Download, User } from 'lucide-react'
+import { Plus, Search, Mail, MessageCircle, Phone, Send, Clock, CheckCheck, Filter, Download, User, Instagram, Link, TrendingUp } from 'lucide-react'
 
 const LEADS = [
-  { id:1, name:'Rajan Constructions',   ph:'+91 98401 23456', email:'rajan@rajanconstruct.in',  src:'Website',   status:'Hot',  via:'WhatsApp', last:'2 hrs ago',   stage:'Negotiation'     },
-  { id:2, name:'Sri Builders',          ph:'+91 99401 78901', email:'info@sribuilders.com',      src:'Referral',  status:'Warm', via:'Email',    last:'1 day ago',   stage:'Proposal Sent'   },
-  { id:3, name:'Metro Infra Ltd',       ph:'+91 96001 45678', email:'metro@metroinfra.in',       src:'Walk-in',   status:'New',  via:'WhatsApp', last:'5 hrs ago',   stage:'Initial Contact' },
-  { id:4, name:'Lakshmi Interiors',     ph:'+91 97890 12345', email:'lkinteriors@gmail.com',     src:'Instagram', status:'Hot',  via:'Email',    last:'3 hrs ago',   stage:'Negotiation'     },
-  { id:5, name:'Kumar Real Estate',     ph:'+91 99900 11223', email:'kumar@kumarre.in',           src:'Referral',  status:'Cold', via:'Email',    last:'1 week ago',  stage:'Initial Contact' },
-  { id:6, name:'Pooja Spaces',          ph:'+91 96543 21098', email:'pooja@poojasp.com',         src:'Instagram', status:'New',  via:'WhatsApp', last:'6 hrs ago',   stage:'Initial Contact' },
+  { id:1,  name:'Rajan Constructions',   ph:'+91 98401 23456', email:'rajan@rajanconstruct.in',    src:'Website',   status:'Hot',  via:'WhatsApp', last:'2 hrs ago',   stage:'Negotiation'     },
+  { id:2,  name:'Sri Builders',          ph:'+91 99401 78901', email:'info@sribuilders.com',        src:'Referral',  status:'Warm', via:'Email',    last:'1 day ago',   stage:'Proposal Sent'   },
+  { id:3,  name:'Metro Infra Ltd',       ph:'+91 96001 45678', email:'metro@metroinfra.in',         src:'Walk-in',   status:'New',  via:'WhatsApp', last:'5 hrs ago',   stage:'Initial Contact' },
+  { id:4,  name:'Lakshmi Interiors',     ph:'+91 97890 12345', email:'lkinteriors@gmail.com',       src:'Instagram', status:'Hot',  via:'Email',    last:'3 hrs ago',   stage:'Negotiation'     },
+  { id:5,  name:'Kumar Real Estate',     ph:'+91 99900 11223', email:'kumar@kumarre.in',             src:'Referral',  status:'Cold', via:'Email',    last:'1 week ago',  stage:'Initial Contact' },
+  { id:6,  name:'Pooja Spaces',          ph:'+91 96543 21098', email:'pooja@poojasp.com',           src:'Instagram', status:'New',  via:'WhatsApp', last:'6 hrs ago',   stage:'Initial Contact' },
+  { id:7,  name:'Aditya Residencies',    ph:'+91 98765 43210', email:'aditya@adityahomes.in',       src:'Instagram', status:'Hot',  via:'WhatsApp', last:'1 hr ago',    stage:'Negotiation'     },
+  { id:8,  name:'Neha Home Designs',     ph:'+91 93456 78901', email:'neha@nehahome.com',           src:'Instagram', status:'Warm', via:'WhatsApp', last:'4 hrs ago',   stage:'Proposal Sent'   },
+  { id:9,  name:'Apex Architects',       ph:'+91 99123 45678', email:'info@apexarchitects.in',      src:'Instagram', status:'New',  via:'Email',    last:'8 hrs ago',   stage:'Initial Contact' },
+  { id:10, name:'Royal Interiors Blr',   ph:'+91 96789 01234', email:'royal@royalinteriors.in',     src:'Instagram', status:'Warm', via:'WhatsApp', last:'2 days ago',  stage:'Proposal Sent'   },
 ]
 
 const EMAIL_TMPL = [
@@ -28,9 +32,10 @@ const WA_TMPL = [
 
 const sColor: Record<string,string> = { Hot:'badge-red', Warm:'badge-yellow', New:'badge-blue', Cold:'badge-gray' }
 const vColor: Record<string,string> = { WhatsApp:'badge-green', Email:'badge-blue' }
+const srcColor: Record<string,string> = { Instagram:'badge-red', Website:'badge-blue', Referral:'badge-green', 'Walk-in':'badge-gray' }
 
 export default function Leads() {
-  const [tab, setTab]     = useState<'leads'|'email'|'wa'>('leads')
+  const [tab, setTab]     = useState<'leads'|'instagram'|'email'|'wa'>('leads')
   const [search, setSearch] = useState('')
   const [sf, setSf]       = useState('All')
   const [modal, setModal] = useState(false)
@@ -43,13 +48,49 @@ export default function Leads() {
 
   return (
     <div className="space-y-5">
+      {/* Instagram Banner */}
+      <div className="rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4"
+        style={{ background: 'linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%)' }}>
+        <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
+          <Instagram size={26} className="text-white" />
+        </div>
+        <div className="flex-1">
+          <p className="text-white font-bold text-base">Instagram Leads Connected</p>
+          <p className="text-white/80 text-xs mt-0.5">
+            {LEADS.filter(l=>l.src==='Instagram').length} leads this month from Instagram · Meta Business API via Google Sheets sync
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <div className="text-center">
+            <p className="text-white font-bold text-xl">{LEADS.filter(l=>l.src==='Instagram').length}</p>
+            <p className="text-white/70 text-[10px]">This Month</p>
+          </div>
+          <div className="text-center">
+            <p className="text-white font-bold text-xl">3</p>
+            <p className="text-white/70 text-[10px]">Converted</p>
+          </div>
+          <div className="text-center">
+            <p className="text-white font-bold text-xl">60%</p>
+            <p className="text-white/70 text-[10px]">Conversion</p>
+          </div>
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <button className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs px-3 py-2 rounded-lg font-medium transition-colors">
+            <Link size={12}/> Connect API
+          </button>
+          <button className="flex items-center gap-1.5 bg-white text-purple-600 text-xs px-3 py-2 rounded-lg font-bold transition-colors hover:bg-white/90">
+            <TrendingUp size={12}/> View Stats
+          </button>
+        </div>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label:'Total Leads',  val: LEADS.length,                                    accent:'border-brand' },
-          { label:'Hot Leads',    val: LEADS.filter(l=>l.status==='Hot').length,        accent:'border-red-500'    },
-          { label:'Warm Leads',   val: LEADS.filter(l=>l.status==='Warm').length,       accent:'border-yellow-500' },
-          { label:'Conversions',  val: 14,                                               accent:'border-green-500'  },
+          { label:'Total Leads',      val: LEADS.length,                                      accent:'border-brand'      },
+          { label:'Instagram Leads',  val: LEADS.filter(l=>l.src==='Instagram').length,        accent:'border-purple-500' },
+          { label:'Hot Leads',        val: LEADS.filter(l=>l.status==='Hot').length,           accent:'border-red-500'    },
+          { label:'Conversions',      val: 14,                                                  accent:'border-green-500'  },
         ].map(c => (
           <div key={c.label} className={`card border-l-4 ${c.accent}`}>
             <p className="text-2xl font-bold text-gray-800">{c.val}</p>
@@ -62,9 +103,10 @@ export default function Leads() {
       <div className="card !p-0 overflow-hidden">
         <div className="flex border-b border-gray-100">
           {([
-            { id:'leads', label:'All Leads',          icon: User         },
-            { id:'email', label:'Email Automation',   icon: Mail         },
-            { id:'wa',    label:'WhatsApp Automation',icon: MessageCircle},
+            { id:'leads',     label:'All Leads',           icon: User         },
+            { id:'instagram', label:'Instagram Leads',      icon: Instagram    },
+            { id:'email',     label:'Email Automation',     icon: Mail         },
+            { id:'wa',        label:'WhatsApp Automation',  icon: MessageCircle},
           ] as const).map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className={`flex items-center gap-2 px-5 py-3.5 text-sm font-medium border-b-2 transition-colors ${
@@ -112,7 +154,7 @@ export default function Leads() {
                       </td>
                       <td className="text-gray-400 text-xs whitespace-nowrap"><div className="flex items-center gap-1"><Phone size={11}/>{l.ph}</div></td>
                       <td className="text-gray-500 text-xs">{l.email}</td>
-                      <td className="text-gray-400">{l.src}</td>
+                      <td><span className={srcColor[l.src] ?? 'badge-gray'}>{l.src}</span></td>
                       <td className="text-gray-600 whitespace-nowrap">{l.stage}</td>
                       <td><span className={sColor[l.status]}>{l.status}</span></td>
                       <td><span className={vColor[l.via]}>{l.via}</span></td>
@@ -128,6 +170,89 @@ export default function Leads() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* INSTAGRAM */}
+        {tab === 'instagram' && (
+          <div className="p-5 space-y-5">
+            <div className="rounded-xl p-4 flex items-center gap-4"
+              style={{ background: 'linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%)' }}>
+              <Instagram size={32} className="text-white shrink-0"/>
+              <div>
+                <p className="text-white font-bold">Meta Business API — Instagram Lead Ads</p>
+                <p className="text-white/75 text-xs mt-0.5">Leads from Instagram DMs and Lead Ad forms flow here automatically via Google Sheets sync</p>
+              </div>
+              <div className="ml-auto flex items-center gap-2">
+                <div className="w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse"/>
+                <span className="text-white text-xs font-medium">Live Sync Active</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label:'Total Instagram Leads', val: LEADS.filter(l=>l.src==='Instagram').length, color:'text-purple-600' },
+                { label:'Hot',    val: LEADS.filter(l=>l.src==='Instagram'&&l.status==='Hot').length,  color:'text-red-500'    },
+                { label:'Warm',   val: LEADS.filter(l=>l.src==='Instagram'&&l.status==='Warm').length, color:'text-yellow-500' },
+                { label:'Converted',val: 3, color:'text-green-600' },
+              ].map(s=>(
+                <div key={s.label} className="card text-center">
+                  <p className={`text-2xl font-bold ${s.color}`}>{s.val}</p>
+                  <p className="text-xs text-gray-500 mt-1">{s.label}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="overflow-x-auto card p-0">
+              <table className="tbl w-full">
+                <thead><tr><th>Name</th><th>Phone</th><th>Stage</th><th>Status</th><th>Via</th><th>Last Contact</th><th>Actions</th></tr></thead>
+                <tbody>
+                  {LEADS.filter(l=>l.src==='Instagram').map(l=>(
+                    <tr key={l.id}>
+                      <td className="font-medium text-gray-800">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+                            style={{background:'linear-gradient(135deg,#833ab4,#fd1d1d)'}}>
+                            {l.name[0]}
+                          </div>
+                          {l.name}
+                        </div>
+                      </td>
+                      <td className="text-gray-400 text-xs">{l.ph}</td>
+                      <td className="text-gray-600">{l.stage}</td>
+                      <td><span className={sColor[l.status]}>{l.status}</span></td>
+                      <td><span className={vColor[l.via]}>{l.via}</span></td>
+                      <td className="text-gray-500 text-xs"><div className="flex items-center gap-1"><Clock size={11}/>{l.last}</div></td>
+                      <td>
+                        <div className="flex gap-1">
+                          <button className="p-1.5 text-gray-400 hover:text-brand hover:bg-brand/10 rounded-lg" title="Email"><Mail size={13}/></button>
+                          <button className="p-1.5 text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-lg" title="WhatsApp"><MessageCircle size={13}/></button>
+                          <button className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg" title="Call"><Phone size={13}/></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Setup Guide */}
+            <div className="card border border-purple-200 bg-purple-50/40">
+              <p className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><Link size={15} className="text-purple-500"/>How Instagram Leads Connect to Dashboard</p>
+              <div className="space-y-2">
+                {[
+                  { step:'1', text:'Instagram Lead Ad form filled by customer' },
+                  { step:'2', text:'Meta Business API sends lead to Google Sheets (ashutosh@adoracoatings.com)' },
+                  { step:'3', text:'Google Sheets auto-logs: Name, Phone, Message, Timestamp' },
+                  { step:'4', text:'Dashboard reads from Google Sheets via API — shows here in real time' },
+                ].map(s=>(
+                  <div key={s.step} className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-purple-600 text-white text-xs font-bold flex items-center justify-center shrink-0">{s.step}</div>
+                    <p className="text-sm text-gray-600 pt-0.5">{s.text}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}

@@ -1,69 +1,65 @@
 import { useState } from 'react'
 import { Search, Package, Download } from 'lucide-react'
 
-type Product = { id: number; name: string; hsn: string; category: string; price: number; unit: string }
+type Product = { id: number; name: string; hsn: string; category: string; price: number; unit: string; gst: number }
 
 const PRODUCTS: Product[] = [
-  // CCTV
-  { id:1,  name:'Hikvision IP 2MP Bullet Camera',        hsn:'85258020', category:'CCTV',              price:1650,  unit:'Nos' },
-  { id:2,  name:'2MP Dome Camera',                       hsn:'85258020', category:'CCTV',              price:2300,  unit:'Nos' },
-  { id:3,  name:'16 Channel NVR',                        hsn:'85219090', category:'CCTV',              price:5400,  unit:'Nos' },
-  { id:4,  name:'CP Plus 16CH NVR UNR-4K2162-V2',        hsn:'85219090', category:'CCTV',              price:6150,  unit:'Nos' },
-  { id:5,  name:'CP Plus 24PORT POE Switch',             hsn:'85176290', category:'CCTV',              price:6500,  unit:'Nos' },
-  { id:6,  name:'4TB Hard Disc (WD)',                    hsn:'84717020', category:'CCTV',              price:6100,  unit:'Nos' },
-  { id:7,  name:'CP Plus 8CH NVR UNR-108F1',             hsn:'85219090', category:'CCTV',              price:3250,  unit:'Nos' },
-  { id:8,  name:'HIKvision 4port POE Switch',            hsn:'85176290', category:'CCTV',              price:2000,  unit:'Nos' },
-  // Fire Extinguishers
-  { id:9,  name:'1 KG ABC Fire Extinguisher',            hsn:'84241000', category:'Fire Extinguisher', price:480,   unit:'Nos' },
-  { id:10, name:'2 KG ABC Fire Extinguisher',            hsn:'84241000', category:'Fire Extinguisher', price:550,   unit:'Nos' },
-  { id:11, name:'4 KG ABC Fire Extinguisher',            hsn:'84241000', category:'Fire Extinguisher', price:750,   unit:'Nos' },
-  { id:12, name:'6 KG ABC Fire Extinguisher',            hsn:'84241000', category:'Fire Extinguisher', price:850,   unit:'Nos' },
-  { id:13, name:'9 KG ABC Fire Extinguisher',            hsn:'84241000', category:'Fire Extinguisher', price:1250,  unit:'Nos' },
-  { id:14, name:'4.5 KG CO2 Fire Extinguisher',         hsn:'84241000', category:'Fire Extinguisher', price:3750,  unit:'Nos' },
-  { id:15, name:'2 KG CO2 Fire Extinguisher',           hsn:'84241000', category:'Fire Extinguisher', price:2200,  unit:'Nos' },
-  { id:16, name:'7 KG Clean Agent Extinguisher',        hsn:'84241000', category:'Fire Extinguisher', price:8200,  unit:'Nos' },
-  // Sprinklers
-  { id:17, name:'Concealed Pendant Sprinkler (68°C)',    hsn:'84248990', category:'Sprinklers',        price:940,   unit:'Nos' },
-  { id:18, name:'Upright Sprinkler TYCO',               hsn:'84248990', category:'Sprinklers',        price:210,   unit:'Nos' },
-  { id:19, name:'Adjustable Rossette Plate',            hsn:'84249000', category:'Sprinklers',        price:40,    unit:'Nos' },
-  { id:20, name:'Rossette Cup',                         hsn:'83024190', category:'Sprinklers',        price:35,    unit:'Nos' },
-  { id:21, name:'Monsher Flexible Dropper 1000MM',      hsn:'83071000', category:'Sprinklers',        price:560,   unit:'Nos' },
-  { id:22, name:'Flexible Hose Unbraided 150MM',        hsn:'83071000', category:'Sprinklers',        price:650,   unit:'Nos' },
-  // Alarm Systems
-  { id:23, name:'Electronic Hooter',                    hsn:'8531',     category:'Alarm Systems',     price:650,   unit:'Nos' },
-  { id:24, name:'12V 7AH Battery EXIDE',                hsn:'85072000', category:'Alarm Systems',     price:900,   unit:'Nos' },
-  { id:25, name:'12V 7.5AH Battery',                    hsn:'85072000', category:'Alarm Systems',     price:990,   unit:'Nos' },
-  { id:26, name:'RE-716 MR Manual Call Point',          hsn:'85319000', category:'Alarm Systems',     price:350,   unit:'Nos' },
-  { id:27, name:'Hooter Cum Strobe',                    hsn:'85311020', category:'Alarm Systems',     price:650,   unit:'Nos' },
-  { id:28, name:'MCP PLASTIC',                          hsn:'85139000', category:'Alarm Systems',     price:300,   unit:'Nos' },
-  { id:29, name:'2 Zone Fire Alarm Panel',              hsn:'85312000', category:'Alarm Systems',     price:4200,  unit:'Nos' },
-  // Fittings
-  { id:30, name:'Double Door Hose Box (600X750X250)',   hsn:'7308',     category:'Fittings',          price:3300,  unit:'Nos' },
-  { id:31, name:'65MM Butterfly Valve UL/FM Tyco',      hsn:'84818090', category:'Fittings',          price:16050, unit:'Nos' },
-  { id:32, name:'50MM Butterfly Valve UL/FM Tyco',      hsn:'84818090', category:'Fittings',          price:16000, unit:'Nos' },
-  { id:33, name:'Fire Blanket (2M x 2M)',               hsn:'70199000', category:'Fittings',          price:1450,  unit:'Nos' },
-  { id:34, name:'GI U Bolt 65MM',                       hsn:'73181500', category:'Fittings',          price:28,    unit:'Nos' },
-  { id:35, name:'Berger Signal Red Paint',              hsn:'32089090', category:'Fittings',          price:275,   unit:'Ltr' },
-  // Signages
-  { id:36, name:'Fire Exit LED Board',                  hsn:'94056090', category:'Signages',          price:2200,  unit:'Nos' },
-  { id:37, name:'Fire Extinguisher Signage Triangle',   hsn:'83100000', category:'Signages',          price:125,   unit:'Nos' },
-  { id:38, name:'Fire Order Board A2 Size',             hsn:'83100000', category:'Signages',          price:500,   unit:'Nos' },
-  { id:39, name:'Exit Signage 12"x4" Photoluminescent', hsn:'83100000', category:'Signages',          price:180,   unit:'Nos' },
-  { id:40, name:'First Aid Box With Content (Metallic)',hsn:'30065000', category:'Signages',          price:1600,  unit:'Nos' },
-  // Pumps & Panel
-  { id:41, name:'Kirloskar KDI 538+ 5HP Pumpset',      hsn:'84137000', category:'Pumps & Panel',     price:23729, unit:'Nos' },
-  { id:42, name:'Kirloskar KDI 335++ 3HP Pumpset',     hsn:'84137000', category:'Pumps & Panel',     price:18644, unit:'Nos' },
+  // Wall Finishes
+  { id:1,  name:'Metallic Wall Finish — Premium',        hsn:'32081090', category:'Wall Finishes',    price:185,  unit:'Sqft', gst:18 },
+  { id:2,  name:'Metallic Wall Finish — Classic',        hsn:'32081090', category:'Wall Finishes',    price:145,  unit:'Sqft', gst:18 },
+  { id:3,  name:'Moroccan Wall Finish',                  hsn:'32081090', category:'Wall Finishes',    price:220,  unit:'Sqft', gst:18 },
+  { id:4,  name:'Greek Lime Plaster',                    hsn:'32089090', category:'Wall Finishes',    price:195,  unit:'Sqft', gst:18 },
+  { id:5,  name:'Venetian Plaster Finish',               hsn:'32089090', category:'Wall Finishes',    price:250,  unit:'Sqft', gst:18 },
+  { id:6,  name:'Silk Plaster Coating',                  hsn:'32089090', category:'Wall Finishes',    price:175,  unit:'Sqft', gst:18 },
+  { id:7,  name:'Custom Acoustics Texture Coating',      hsn:'32081090', category:'Wall Finishes',    price:165,  unit:'Sqft', gst:18 },
+  { id:8,  name:'Microcement Wall Finish',               hsn:'32089090', category:'Wall Finishes',    price:210,  unit:'Sqft', gst:18 },
+  // Metallic Textures
+  { id:9,  name:'Metallic Texture — Gold (per litre)',   hsn:'32081090', category:'Metallic Textures',price:850,  unit:'Ltr',  gst:18 },
+  { id:10, name:'Metallic Texture — Silver (per litre)', hsn:'32081090', category:'Metallic Textures',price:820,  unit:'Ltr',  gst:18 },
+  { id:11, name:'Metallic Texture — Copper (per litre)', hsn:'32081090', category:'Metallic Textures',price:800,  unit:'Ltr',  gst:18 },
+  { id:12, name:'Metallic Texture — Bronze (per litre)', hsn:'32081090', category:'Metallic Textures',price:810,  unit:'Ltr',  gst:18 },
+  { id:13, name:'Metallic Texture — Pearl (per litre)',  hsn:'32081090', category:'Metallic Textures',price:890,  unit:'Ltr',  gst:18 },
+  // Floor Finishes
+  { id:14, name:'Microcement Floor Finish',              hsn:'32089090', category:'Floor Finishes',   price:280,  unit:'Sqft', gst:18 },
+  { id:15, name:'Epoxy Floor Coating',                   hsn:'32082090', category:'Floor Finishes',   price:145,  unit:'Sqft', gst:18 },
+  { id:16, name:'Decorative Concrete Finish',            hsn:'32089090', category:'Floor Finishes',   price:195,  unit:'Sqft', gst:18 },
+  { id:17, name:'Designer Flooring — Premium',           hsn:'32089090', category:'Floor Finishes',   price:320,  unit:'Sqft', gst:18 },
+  { id:18, name:'Polished Concrete Floor',               hsn:'32089090', category:'Floor Finishes',   price:240,  unit:'Sqft', gst:18 },
+  // Exterior Finishes
+  { id:19, name:'Exterior Texture Coating',              hsn:'32100090', category:'Exterior Finishes',price:95,   unit:'Sqft', gst:18 },
+  { id:20, name:'Weather Shield Coating',                hsn:'32100090', category:'Exterior Finishes',price:85,   unit:'Sqft', gst:18 },
+  { id:21, name:'Sand Texture Finish',                   hsn:'32100090', category:'Exterior Finishes',price:75,   unit:'Sqft', gst:18 },
+  { id:22, name:'Stone Texture Coating',                 hsn:'32100090', category:'Exterior Finishes',price:110,  unit:'Sqft', gst:18 },
+  { id:23, name:'Acrylic Exterior Finish',               hsn:'32100090', category:'Exterior Finishes',price:65,   unit:'Sqft', gst:18 },
+  // Primers & Base Coats
+  { id:24, name:'Adora Base Coat — Interior',            hsn:'32081090', category:'Primers & Sealers',price:380,  unit:'Ltr',  gst:18 },
+  { id:25, name:'Adora Base Coat — Exterior',            hsn:'32100090', category:'Primers & Sealers',price:350,  unit:'Ltr',  gst:18 },
+  { id:26, name:'Wall Sealer — Premium',                 hsn:'32082090', category:'Primers & Sealers',price:420,  unit:'Ltr',  gst:18 },
+  { id:27, name:'Anti-Fungal Primer',                    hsn:'32082090', category:'Primers & Sealers',price:460,  unit:'Ltr',  gst:18 },
+  { id:28, name:'Protective Top Coat — Gloss',           hsn:'32081090', category:'Primers & Sealers',price:680,  unit:'Ltr',  gst:18 },
+  { id:29, name:'Protective Top Coat — Matte',           hsn:'32081090', category:'Primers & Sealers',price:660,  unit:'Ltr',  gst:18 },
+  // Specialty Finishes
+  { id:30, name:'Bespoke Designer Finish — Custom',      hsn:'32089090', category:'Specialty',        price:350,  unit:'Sqft', gst:18 },
+  { id:31, name:'Aged Plaster Finish',                   hsn:'32089090', category:'Specialty',        price:230,  unit:'Sqft', gst:18 },
+  { id:32, name:'Lace Texture Finish',                   hsn:'32089090', category:'Specialty',        price:200,  unit:'Sqft', gst:18 },
+  { id:33, name:'Travertine Wall Finish',                hsn:'32089090', category:'Specialty',        price:270,  unit:'Sqft', gst:18 },
+  { id:34, name:'Suede Effect Coating',                  hsn:'32089090', category:'Specialty',        price:190,  unit:'Sqft', gst:18 },
 ]
 
-const CATEGORIES = ['All', 'CCTV', 'Fire Extinguisher', 'Sprinklers', 'Alarm Systems', 'Fittings', 'Signages', 'Pumps & Panel']
+const CATEGORIES = ['All', 'Wall Finishes', 'Metallic Textures', 'Floor Finishes', 'Exterior Finishes', 'Primers & Sealers', 'Specialty']
+
 const catBadge: Record<string, string> = {
-  'CCTV': 'badge-blue', 'Fire Extinguisher': 'badge-red', 'Sprinklers': 'badge-blue',
-  'Alarm Systems': 'badge-yellow', 'Fittings': 'badge-gray', 'Signages': 'badge-green', 'Pumps & Panel': 'badge-gold',
+  'Wall Finishes':     'badge-blue',
+  'Metallic Textures': 'badge-gold',
+  'Floor Finishes':    'badge-green',
+  'Exterior Finishes': 'badge-yellow',
+  'Primers & Sealers': 'badge-gray',
+  'Specialty':         'badge-red',
 }
 
 export default function Products() {
-  const [search, setSearch]   = useState('')
-  const [cat, setCat]         = useState('All')
+  const [search, setSearch] = useState('')
+  const [cat, setCat]       = useState('All')
 
   const filtered = PRODUCTS.filter(p =>
     (cat === 'All' || p.category === cat) &&
@@ -73,8 +69,8 @@ export default function Products() {
   return (
     <div className="space-y-4">
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* Category Summary Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {CATEGORIES.slice(1).map(c => {
           const count = PRODUCTS.filter(p => p.category === c).length
           return (
@@ -122,13 +118,14 @@ export default function Products() {
                 <th>Product Name</th>
                 <th>Category</th>
                 <th>HSN Code</th>
-                <th className="text-right">Purchase Price</th>
+                <th className="text-right">Rate</th>
                 <th>Unit</th>
+                <th className="text-center">GST %</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={6} className="text-center py-10 text-gray-400">
+                <tr><td colSpan={7} className="text-center py-10 text-gray-400">
                   <Package size={32} className="mx-auto mb-2 opacity-30" />
                   No products found
                 </td></tr>
@@ -138,9 +135,10 @@ export default function Products() {
                   <td className="text-gray-400 font-mono text-xs">{String(i+1).padStart(2,'0')}</td>
                   <td className="font-medium text-gray-700">{p.name}</td>
                   <td><span className={catBadge[p.category] ?? 'badge-gray'}>{p.category}</span></td>
-                  <td className="font-mono text-xs text-gray-500">{p.hsn || '—'}</td>
+                  <td className="font-mono text-xs text-gray-500">{p.hsn}</td>
                   <td className="text-right font-semibold text-brand">₹{p.price.toLocaleString('en-IN')}</td>
                   <td className="text-gray-500">{p.unit}</td>
+                  <td className="text-center text-gray-500">{p.gst}%</td>
                 </tr>
               ))}
             </tbody>

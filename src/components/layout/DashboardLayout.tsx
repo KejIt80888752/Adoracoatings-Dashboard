@@ -16,6 +16,8 @@ const TITLES: Record<string, string> = {
   '/profit-loss':       'Profit & Loss',
   '/gst-reports':       'GST Reports',
   '/user-management':   'User Management',
+  '/clients':           'B2B & B2C Clients',
+  '/inventory':         'Stock & Inventory',
   '/orders':            'Orders',
   '/reports':           'Reports',
   '/settings':          'Settings',
@@ -25,7 +27,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false)
   const loc = useLocation()
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--bg-main)' }}>
       <Sidebar open={open} onClose={() => setOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Topbar onMenu={() => setOpen(true)} title={TITLES[loc.pathname] ?? 'AdoraCoatings'} />

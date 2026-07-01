@@ -4,9 +4,9 @@ import { useAuth } from '@/hooks/useAuth'
 import { Eye, EyeOff, Loader2, MapPin, Phone } from 'lucide-react'
 
 const DEMO_CREDS = [
-  { label: 'Admin',   email: 'admin@adoracoatings.com',   pw: 'admin123' },
-  { label: 'Manager', email: 'manager@adoracoatings.com', pw: 'manager123' },
-  { label: 'Sales',   email: 'sales@adoracoatings.com',   pw: 'sales123' },
+  { label: 'Admin',   email: 'ashutosh@adoracoatings.com', pw: 'admin123'   },
+  { label: 'Manager', email: 'manager@adoracoatings.com',  pw: 'manager123' },
+  { label: 'Sales',   email: 'sales@adoracoatings.com',    pw: 'sales123'   },
 ]
 
 const STATS = [
@@ -44,78 +44,72 @@ export default function Login() {
       {/* Centered card */}
       <div className="flex w-full max-w-3xl rounded-2xl overflow-hidden shadow-2xl">
 
-        {/* Left — dark panel */}
-        <div className="w-[42%] flex flex-col justify-between p-8 shrink-0"
-          style={{ background: 'linear-gradient(160deg, #0f2b3d 0%, #1a4050 60%, #0f2b3d 100%)' }}>
+        {/* Left — Adora green panel */}
+        <div className="w-[44%] flex flex-col justify-between py-10 px-9 shrink-0"
+          style={{ background: 'linear-gradient(160deg, #2d5213 0%, #3d6b1a 55%, #2d5213 100%)' }}>
 
-          {/* Logo */}
+          {/* Logo on white card */}
           <div>
-            <img
-              src="https://www.adoracoatings.com/assets/images/AA0030/dynamic/companylogos/ar9x2/Adora-Coatings-Logo-White.png"
-              alt="AdoraCoatings"
-              className="h-12 object-contain object-left"
-              onError={e => {
-                e.currentTarget.style.display = 'none'
-                const fb = e.currentTarget.nextElementSibling as HTMLElement
-                if (fb) fb.classList.remove('hidden')
-              }}
-            />
-            <div className="hidden">
-              <p className="font-display font-bold text-white text-xl">AdoraCoatings</p>
+            <div className="bg-white rounded-xl px-4 py-3 inline-block mb-4 shadow-sm">
+              <img
+                src={`${import.meta.env.BASE_URL}adora-logo.png`}
+                alt="Adora Coatings"
+                className="h-10 w-auto object-contain object-left"
+              />
             </div>
-            <p className="text-white/40 text-[11px] mt-1.5 tracking-widest uppercase font-medium">Business Dashboard</p>
+            <p className="text-white/50 text-[11px] tracking-widest uppercase font-semibold">Business Dashboard</p>
           </div>
 
           {/* Headline + description */}
-          <div className="space-y-3">
-            <h2 className="font-display text-xl font-bold text-white leading-snug">
+          <div className="space-y-4">
+            <h2 className="font-display text-2xl font-bold text-white leading-snug">
               Premium Wall Finishes<br />& Designer Coatings
             </h2>
-            <p className="text-white/50 text-xs leading-relaxed">
+            <p className="text-white/55 text-xs leading-relaxed">
               Transforming spaces with luxury metallic finishes, Moroccan plasters, and bespoke interior solutions since 1996.
             </p>
           </div>
 
           {/* Stats 2x2 */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             {STATS.map(s => (
-              <div key={s.v} className="rounded-xl p-3 border border-white/10" style={{ background: 'rgba(255,255,255,0.07)' }}>
-                <p className="font-display text-lg font-bold text-[#5ecece]">{s.v}</p>
-                <p className="text-white/45 text-[11px] mt-0.5">{s.l}</p>
+              <div key={s.v} className="rounded-xl px-4 py-3 border border-white/15" style={{ background: 'rgba(255,255,255,0.09)' }}>
+                <p className="font-display text-xl font-bold text-[#b5db69]">{s.v}</p>
+                <p className="text-white/50 text-[11px] mt-0.5">{s.l}</p>
               </div>
             ))}
           </div>
 
           {/* Address */}
-          <div className="space-y-1.5">
-            <div className="flex items-start gap-1.5 text-white/40 text-[11px]">
-              <MapPin size={11} className="mt-0.5 shrink-0 text-[#5ecece]" />
-              <span>Pallikaranai, Chennai – 600 100, Tamil Nadu</span>
+          <div className="space-y-2">
+            <div className="flex items-start gap-2 text-white/50 text-[11px]">
+              <MapPin size={12} className="mt-0.5 shrink-0 text-[#b5db69]" />
+              <span>175/1, Pavilion Rd, Jaya Nagar 1st Block,<br />Bengaluru – 560 011, Karnataka</span>
             </div>
-            <div className="flex items-center gap-1.5 text-white/40 text-[11px]">
-              <Phone size={11} className="shrink-0 text-[#5ecece]" />
-              <span>+91 98400 00000</span>
+            <div className="flex items-center gap-2 text-white/50 text-[11px]">
+              <Phone size={12} className="shrink-0 text-[#b5db69]" />
+              <span>+91 98800 33353 | 98800 44000</span>
             </div>
           </div>
 
           {/* The Raise */}
-          <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col gap-1">
             <img
               src={`${import.meta.env.BASE_URL}the-raise-logo.png`}
               alt="The Raise"
               className="h-5 object-contain object-left opacity-40 hover:opacity-70 transition-opacity"
             />
-            <p className="text-[9px] text-white/25 font-medium tracking-widest uppercase">Powered by KEJ IT Solutions</p>
+            <p className="text-[9px] text-white/30 font-medium tracking-widest uppercase">Powered by KEJ IT Solutions</p>
           </div>
         </div>
 
         {/* Right — form */}
-        <div className="flex-1 bg-white p-8 flex flex-col justify-center">
+        <div className="flex-1 bg-white px-10 py-10 flex flex-col justify-center">
 
-          <h2 className="font-display text-2xl font-bold text-gray-800 mb-1">Sign In</h2>
-          <p className="text-gray-400 text-sm mb-6">Access your business dashboard</p>
+          <h2 className="font-display text-2xl font-bold text-gray-800 mb-1.5">Sign In</h2>
+          <p className="text-gray-400 text-sm mb-8">Access your business dashboard</p>
 
-          <form onSubmit={submit} className="space-y-4">
+          <form onSubmit={submit} className="space-y-5">
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1.5">Email Address</label>
               <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
@@ -136,19 +130,19 @@ export default function Login() {
               <div className="bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg px-3 py-2">{error}</div>
             )}
             <button type="submit" disabled={loading}
-              className="w-full btn-gold flex items-center justify-center gap-2 py-2.5 text-sm font-semibold">
+              className="w-full btn-gold flex items-center justify-center gap-2 py-3 text-sm font-semibold">
               {loading ? <><Loader2 size={15} className="animate-spin" />Signing in...</> : 'Sign In'}
             </button>
           </form>
 
           {/* Demo credentials */}
-          <div className="mt-5">
-            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mb-2">Demo Credentials — click to fill</p>
-            <div className="space-y-1.5">
+          <div className="mt-8">
+            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mb-3">Demo Credentials — click to fill</p>
+            <div className="space-y-2">
               {DEMO_CREDS.map(c => (
                 <button key={c.label} type="button"
                   onClick={() => fillCred(c.email, c.pw)}
-                  className="w-full flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 hover:border-brand hover:bg-[#f0fafa] px-3 py-2 transition-all group">
+                  className="w-full flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 hover:border-brand hover:bg-[#f2f9e8] px-4 py-2.5 transition-all group">
                   <span className="text-xs font-semibold text-gray-700 group-hover:text-brand">{c.label}</span>
                   <span className="text-[11px] text-gray-400 group-hover:text-brand/60">{c.email}</span>
                 </button>

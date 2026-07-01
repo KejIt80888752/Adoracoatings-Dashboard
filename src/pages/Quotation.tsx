@@ -68,7 +68,7 @@ export default function Quotation() {
             placeholder="Search project or quotation #…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-teal-300"
+            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-brand-200"
           />
         </div>
         <div className="overflow-x-auto">

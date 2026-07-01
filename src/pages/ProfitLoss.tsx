@@ -57,7 +57,7 @@ export default function ProfitLoss() {
         </div>
         <div className="card-sm">
           <div className="text-xs text-gray-500 mb-1">Profit Margin</div>
-          <div className="text-xl font-bold text-teal-600">28.5%</div>
+          <div className="text-xl font-bold text-brand">28.5%</div>
         </div>
       </div>
 
@@ -70,7 +70,7 @@ export default function ProfitLoss() {
             <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `₹${(v/100000).toFixed(1)}L`} />
             <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [fmt(v)]} />
             <Legend />
-            <Bar dataKey="Revenue"  fill="#2a7b7b" radius={[4,4,0,0]} />
+            <Bar dataKey="Revenue"  fill="#4a7c1f" radius={[4,4,0,0]} />
             <Bar dataKey="Expenses" fill="#f87171" radius={[4,4,0,0]} />
             <Bar dataKey="Profit"   fill="#34d399" radius={[4,4,0,0]} />
           </BarChart>

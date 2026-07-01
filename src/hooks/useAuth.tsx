@@ -10,9 +10,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try { return JSON.parse(localStorage.getItem('adora_user') ?? 'null') } catch { return null }
   })
 
+  const USERS: Record<string, { pw: string; name: string; role: string }> = {
+    'ashutosh@adoracoatings.com': { pw: 'admin123',   name: 'Ashutosh Mehraa', role: 'Admin'           },
+    'manager@adoracoatings.com':  { pw: 'manager123', name: 'Manager',         role: 'Manager'         },
+    'sales@adoracoatings.com':    { pw: 'sales123',   name: 'Sales Executive', role: 'Sales Executive' },
+  }
+
   const login = (email: string, password: string) => {
-    if (!email || password.length < 6) return false
-    const u: User = { email, name: email.split('@')[0], role: 'Admin' }
+    const found = USERS[email.toLowerCase().trim()]
+    if (!found || found.pw !== password) return false
+    const u: User = { email, name: found.name, role: found.role }
     setUser(u)
     localStorage.setItem('adora_user', JSON.stringify(u))
     return true

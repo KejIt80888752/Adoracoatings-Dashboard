@@ -1,5 +1,6 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from '@/hooks/useAuth'
+import { DarkModeProvider } from '@/hooks/useDarkMode'
 import DashboardLayout   from '@/components/layout/DashboardLayout'
 import Login             from '@/pages/Login'
 import Dashboard         from '@/pages/Dashboard'
@@ -17,6 +18,8 @@ import Outstanding       from '@/pages/Outstanding'
 import ProfitLoss        from '@/pages/ProfitLoss'
 import GstReports        from '@/pages/GstReports'
 import UserManagement    from '@/pages/UserManagement'
+import Clients           from '@/pages/Clients'
+import Inventory         from '@/pages/Inventory'
 
 function Guard({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
@@ -43,6 +46,8 @@ function AppRoutes() {
               <Route path="/profit-loss"       element={<ProfitLoss      />} />
               <Route path="/gst-reports"       element={<GstReports      />} />
               <Route path="/user-management"   element={<UserManagement  />} />
+              <Route path="/clients"           element={<Clients         />} />
+              <Route path="/inventory"         element={<Inventory       />} />
               <Route path="/orders"            element={<Orders          />} />
               <Route path="/reports"           element={<Reports         />} />
               <Route path="/settings"          element={<Settings        />} />
@@ -57,9 +62,11 @@ function AppRoutes() {
 export default function App() {
   return (
     <HashRouter>
+      <DarkModeProvider>
       <AuthProvider>
         <AppRoutes />
       </AuthProvider>
+      </DarkModeProvider>
     </HashRouter>
   )
 }

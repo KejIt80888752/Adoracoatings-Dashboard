@@ -37,7 +37,7 @@ const expenseData = [
   { name: 'GST Paid',  value: 173414 },
 ]
 
-const PIE_COLORS = ['#2a7b7b', '#3fa3a3', '#6dc5c5', '#a8dfdf']
+const PIE_COLORS = ['#4a7c1f', '#5a9e25', '#90d147', '#b5db69']
 
 const tooltipStyle = { backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 12 }
 
@@ -62,7 +62,7 @@ export default function SalesReports() {
         </div>
         <div className="card-sm">
           <div className="text-xs text-gray-500 mb-1">Gross Profit</div>
-          <div className="text-2xl font-bold text-teal-600">₹5,92,064</div>
+          <div className="text-2xl font-bold text-brand">₹5,92,064</div>
           <div className="text-xs text-gray-400 mt-1">Margin ~28.5%</div>
         </div>
       </div>
@@ -76,7 +76,7 @@ export default function SalesReports() {
               <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-35} textAnchor="end" interval={0} />
               <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `₹${(v/100000).toFixed(1)}L`} />
               <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [fmt(v), 'Revenue']} />
-              <Bar dataKey="revenue" fill="#2a7b7b" radius={[4,4,0,0]} />
+              <Bar dataKey="revenue" fill="#4a7c1f" radius={[4,4,0,0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

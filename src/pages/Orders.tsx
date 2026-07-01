@@ -63,7 +63,7 @@ export default function Orders() {
               className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all border ${tab === t ? 'bg-brand text-white border-brand' : 'border-gray-200 text-gray-500 hover:border-brand/40 hover:text-brand'}`}>{t}</button>
           ))}
         </div>
-        <button className="btn-gold flex items-center gap-1.5 text-xs shrink-0"><Download size={13} /> Export</button>
+        <button onClick={() => { const rows = PROJECTS.map(p => [p.sl,p.name,p.inv,p.date,p.base,p.gst,p.total,p.rcvd,p.profit,p.status].join(",")).join("\n"); const csv = "Sl,Project,Invoice,Date,Base,GST,Total,Received,Profit,Status\n" + rows; const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download = "orders.csv"; a.click(); }} className="btn-gold flex items-center gap-1.5 text-xs shrink-0"><Download size={13} /> Export</button>
       </div>
 
       {/* Table */}
@@ -75,7 +75,7 @@ export default function Orders() {
                 <th>#</th><th>Project Name</th><th>Invoice #</th><th>Date</th>
                 <th className="text-right">Base Value</th><th className="text-right">GST</th>
                 <th className="text-right">Total</th><th className="text-right">Received</th>
-                <th className="text-right">Profit</th><th>Status</th>
+                <th className="text-right text-red-500">Pending Amount</th><th className="text-right">Profit</th><th>Status</th>
               </tr>
             </thead>
             <tbody>
@@ -89,6 +89,7 @@ export default function Orders() {
                   <td className="text-right text-gray-500 text-xs">{fmt(p.gst)}</td>
                   <td className="text-right font-semibold text-brand">{fmt(p.total)}</td>
                   <td className="text-right text-gray-600">{fmt(p.rcvd)}</td>
+                  <td className="text-right font-semibold text-red-500">{p.pending > 0 ? fmt(p.pending) : <span className="text-green-500 text-xs">—</span>}</td>
                   <td className="text-right font-semibold text-green-600">{fmt(p.profit)}</td>
                   <td>
                     <span className={statusBadge[p.status] ?? 'badge-gray'}>

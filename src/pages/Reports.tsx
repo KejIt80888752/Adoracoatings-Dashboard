@@ -9,7 +9,7 @@ const catData  = [
   {name:'Metallic',v:38},{name:'Moroccan',v:22},{name:'Decorative',v:17},{name:'Exterior',v:15},{name:'Others',v:8}
 ]
 const leads    = [{w:'W1',total:42,conv:8},{w:'W2',total:55,conv:12},{w:'W3',total:48,conv:9},{w:'W4',total:63,conv:15}]
-const COLORS   = ['#2a7b7b','#3a9595','#a3e0e0','#d1f0f0','#1a5f5f']
+const COLORS   = ['#4a7c1f','#6ab52a','#b5db69','#daedb4','#2d5213']
 const tt = { backgroundColor:"#fff", border:"1px solid #e5e7eb", borderRadius:8, fontSize:12, color:"#374151"}
 
 const KPIS = [
@@ -37,7 +37,9 @@ export default function Reports() {
       <div className="card">
         <div className="flex items-center justify-between mb-4">
           <div><p className="section-title text-base">Revenue vs Expense</p><p className="section-sub">Jan – May 2026</p></div>
-          <button className="btn-outline-gold flex items-center gap-1.5 text-xs"><Download size={13}/>Export</button>
+          <button onClick={() => {
+            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['Month,Revenue,Expense\nJan,386000,218000\nFeb,421000,190000\nMar,539000,265000\nApr,612000,310000\nMay,475000,238000'],{type:'text/csv'})); a.download = 'adora-reports.csv'; a.click()
+          }} className="btn-outline-gold flex items-center gap-1.5 text-xs"><Download size={13}/>Export</button>
         </div>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={monthly} barGap={4}>
@@ -46,8 +48,8 @@ export default function Reports() {
             <YAxis tick={{fontSize:11,fill:'#6b7280'}} axisLine={false} tickLine={false} tickFormatter={v=>`₹${(v/1000).toFixed(0)}k`}/>
             <Tooltip contentStyle={tt} formatter={(v:number)=>`₹${v.toLocaleString()}`}/>
             <Legend wrapperStyle={{fontSize:12}}/>
-            <Bar dataKey="rev" name="Revenue" fill="#2a7b7b" radius={[4,4,0,0]} barSize={18}/>
-            <Bar dataKey="exp" name="Expense" fill="#d1f0f0" radius={[4,4,0,0]} barSize={18}/>
+            <Bar dataKey="rev" name="Revenue" fill="#4a7c1f" radius={[4,4,0,0]} barSize={18}/>
+            <Bar dataKey="exp" name="Expense" fill="#daedb4" radius={[4,4,0,0]} barSize={18}/>
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -75,8 +77,8 @@ export default function Reports() {
               <YAxis tick={{fontSize:11,fill:'#6b7280'}} axisLine={false} tickLine={false}/>
               <Tooltip contentStyle={tt}/>
               <Legend wrapperStyle={{fontSize:12}}/>
-              <Line type="monotone" dataKey="total" name="Total Leads" stroke="#a3e0e0" strokeWidth={2} dot={{r:4,fill:'#3d3520'}}/>
-              <Line type="monotone" dataKey="conv"  name="Converted"  stroke="#2a7b7b" strokeWidth={2.5} dot={{r:4,fill:'#C9A96E'}}/>
+              <Line type="monotone" dataKey="total" name="Total Leads" stroke="#b5db69" strokeWidth={2} dot={{r:4,fill:'#3d3520'}}/>
+              <Line type="monotone" dataKey="conv"  name="Converted"  stroke="#4a7c1f" strokeWidth={2.5} dot={{r:4,fill:'#C9A96E'}}/>
             </LineChart>
           </ResponsiveContainer>
         </div>

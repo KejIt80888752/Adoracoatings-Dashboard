@@ -60,7 +60,7 @@ export default function GstReports() {
         </div>
         <div className="card-sm">
           <div className="text-xs text-gray-500 mb-1">Net GST Liability</div>
-          <div className="text-2xl font-bold text-teal-600">₹1,43,005</div>
+          <div className="text-2xl font-bold text-brand">₹1,43,005</div>
         </div>
       </div>
 
@@ -72,7 +72,7 @@ export default function GstReports() {
             <XAxis dataKey="month" tick={{ fontSize: 12 }} />
             <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `₹${(v / 1000).toFixed(0)}K`} />
             <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [fmt(v)]} />
-            <Bar dataKey="Collected" fill="#2a7b7b" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="Collected" fill="#4a7c1f" radius={[4, 4, 0, 0]} />
             <Bar dataKey="Paid"      fill="#f87171" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>

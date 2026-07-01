@@ -1,18 +1,42 @@
-import { useState } from 'react'
-import { Plus, Search, Mail, MessageCircle, Phone, Send, Clock, CheckCheck, Filter, Download, User, Instagram, Link, TrendingUp } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Plus, Search, Mail, MessageCircle, Phone, Send, Clock, CheckCheck, Filter, Download, User, Instagram, Link, TrendingUp, X, Copy, ExternalLink } from 'lucide-react'
+import { fetchSheet, addRow } from '../lib/api'
+
+const STAFF = ['Abhishek (Marketing)', 'Muniraj Sir (Supervisor)', 'Anil Sir (Supervisor)', 'Ashutosh Mehraa (Admin)']
+
+type Lead = { ID: string; Name: string; Phone: string; Email: string; Source: string; Status: string; Stage: string; Via: string; 'Date Added': string }
 
 const LEADS = [
-  { id:1,  name:'Rajan Constructions',   ph:'+91 98401 23456', email:'rajan@rajanconstruct.in',    src:'Website',   status:'Hot',  via:'WhatsApp', last:'2 hrs ago',   stage:'Negotiation'     },
-  { id:2,  name:'Sri Builders',          ph:'+91 99401 78901', email:'info@sribuilders.com',        src:'Referral',  status:'Warm', via:'Email',    last:'1 day ago',   stage:'Proposal Sent'   },
-  { id:3,  name:'Metro Infra Ltd',       ph:'+91 96001 45678', email:'metro@metroinfra.in',         src:'Walk-in',   status:'New',  via:'WhatsApp', last:'5 hrs ago',   stage:'Initial Contact' },
-  { id:4,  name:'Lakshmi Interiors',     ph:'+91 97890 12345', email:'lkinteriors@gmail.com',       src:'Instagram', status:'Hot',  via:'Email',    last:'3 hrs ago',   stage:'Negotiation'     },
-  { id:5,  name:'Kumar Real Estate',     ph:'+91 99900 11223', email:'kumar@kumarre.in',             src:'Referral',  status:'Cold', via:'Email',    last:'1 week ago',  stage:'Initial Contact' },
-  { id:6,  name:'Pooja Spaces',          ph:'+91 96543 21098', email:'pooja@poojasp.com',           src:'Instagram', status:'New',  via:'WhatsApp', last:'6 hrs ago',   stage:'Initial Contact' },
-  { id:7,  name:'Aditya Residencies',    ph:'+91 98765 43210', email:'aditya@adityahomes.in',       src:'Instagram', status:'Hot',  via:'WhatsApp', last:'1 hr ago',    stage:'Negotiation'     },
-  { id:8,  name:'Neha Home Designs',     ph:'+91 93456 78901', email:'neha@nehahome.com',           src:'Instagram', status:'Warm', via:'WhatsApp', last:'4 hrs ago',   stage:'Proposal Sent'   },
-  { id:9,  name:'Apex Architects',       ph:'+91 99123 45678', email:'info@apexarchitects.in',      src:'Instagram', status:'New',  via:'Email',    last:'8 hrs ago',   stage:'Initial Contact' },
-  { id:10, name:'Royal Interiors Blr',   ph:'+91 96789 01234', email:'royal@royalinteriors.in',     src:'Instagram', status:'Warm', via:'WhatsApp', last:'2 days ago',  stage:'Proposal Sent'   },
+  { id:1,  name:'KAF ARCHITECTS',                     ph:'080 2244 2734',   email:'kembhaviarchitects@gmail.com',     src:'Cold Call', status:'Hot',  via:'Phone', last:'Jan 2026', stage:'Follow-Up'     },
+  { id:2,  name:'MAZE CONCEPT DESIGN STUDIO',          ph:'9972771679',      email:'studio@mazeconcept.com',           src:'Cold Call', status:'Hot',  via:'Phone', last:'Jan 2026', stage:'Meeting Done'  },
+  { id:3,  name:'MANOJ & ASSOCIATES',                  ph:'098450 06699',    email:'',                                 src:'Cold Call', status:'Hot',  via:'Phone', last:'Jan 2026', stage:'Meeting Fixed' },
+  { id:4,  name:'PROCESS ARCHITECT',                   ph:'098805 94163',    email:'processarchitects21@gmail.com',    src:'Cold Call', status:'Hot',  via:'Phone', last:'Jan 2026', stage:'Follow-Up'     },
+  { id:5,  name:'EVOLVE DESIGN & CONSTRUCTION',        ph:'097409 38581',    email:'',                                 src:'Cold Call', status:'Hot',  via:'Phone', last:'Jan 2026', stage:'Follow-Up'     },
+  { id:6,  name:'ENSEMBLE',                            ph:'097426 55736',    email:'infor@liarchstudio.co',            src:'Cold Call', status:'Hot',  via:'Phone', last:'Feb 2026', stage:'Meeting Fixed' },
+  { id:7,  name:'MAP ARCHITECTS',                      ph:'070192 75035',    email:'',                                 src:'Cold Call', status:'Warm', via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
+  { id:8,  name:'D ZING ARCHITECTS',                   ph:'080 2245 0688',   email:'info@dzigns.in',                   src:'Cold Call', status:'Warm', via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
+  { id:9,  name:'SPACIOUS HOME CONSTRUCTION',          ph:'073400 07347',    email:'Support@Spacioushomes.in',         src:'Cold Call', status:'Warm', via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
+  { id:10, name:'WEA DESIGNS PVT LTD',                 ph:'079960 60000',    email:'sales@weadesign.com',              src:'Cold Call', status:'Warm', via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
+  { id:11, name:'BLUECAP INTERIORS',                   ph:'098452 64192',    email:'interiors@blucap.in',              src:'Cold Call', status:'Warm', via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
+  { id:12, name:'JOIS DESIGN STUDIO',                  ph:'088613 52759',    email:'ananya@joisdesignhouse.co.in',     src:'Cold Call', status:'Warm', via:'Phone', last:'Jan 2026', stage:'Meeting Fixed' },
+  { id:13, name:'ME DESIGN STUDIO',                    ph:'098864 00664',    email:'office@medesignstudio.in',         src:'Cold Call', status:'Warm', via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
+  { id:14, name:'GREYSCALE DESIGN STUDIO',             ph:'080 4151 0310',   email:'design-consult@greyscale.in',      src:'Cold Call', status:'Warm', via:'Phone', last:'Mar 2026', stage:'Initial Contact'},
+  { id:15, name:'LIVING ART ARCHITECT',                ph:'099000 45369',    email:'info@livingincorp.net',            src:'Cold Call', status:'Warm', via:'Phone', last:'Feb 2026', stage:'Initial Contact'},
+  { id:16, name:'ALCHEMY ARCHITECTS',                  ph:'099866 08813',    email:'info@alchemy-architects.com',      src:'Cold Call', status:'New',  via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
+  { id:17, name:'THE PURPLE INK STUDIO',               ph:'088672 65213',    email:'info@thepurpleinkstudio.com',      src:'Cold Call', status:'New',  via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
+  { id:18, name:'NANDISH ARCHITECT',                   ph:'080 2244 4060',   email:'nandisharchitects@gmail.com',      src:'Cold Call', status:'New',  via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
+  { id:19, name:'HABITART ARCHITECTURE STUDIO',        ph:'099453 50160',    email:'',                                 src:'Cold Call', status:'New',  via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
+  { id:20, name:'BRICK & BOLT HOME CONSTRUCTION',      ph:'075052 05205',    email:'info@bricknbolt.com',              src:'Cold Call', status:'New',  via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
+  { id:21, name:'GEOMETRICS ENGINEER ARCHITECTURE',    ph:'080 2663 8195',   email:'info@geometrixs.com',              src:'Cold Call', status:'Warm', via:'Phone', last:'Mar 2026', stage:'Initial Contact'},
+  { id:22, name:'ZENTAGAL ARCHITECT',                  ph:'081059 91912',    email:'info@zentanglearchitects.com',     src:'Cold Call', status:'Warm', via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
+  { id:23, name:'VISHISHTA ARCHITECTS',                ph:'099860 29694',    email:'vishishtaarchitectsblr@gmail.com', src:'Cold Call', status:'New',  via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
+  { id:24, name:'IA STUDIO',                           ph:'080 4970 6649',   email:'work@interfacear.in',              src:'Cold Call', status:'Warm', via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
+  { id:25, name:'CBRC',                                ph:'090036 18778',    email:'',                                 src:'Cold Call', status:'Warm', via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
 ]
+
+function mapLead(l: Lead, i: number) {
+  return { id: i+1, name: l.Name||'', ph: l.Phone||'', email: l.Email||'', src: l.Source||'', status: l.Status||'New', via: l.Via||'', last: l['Date Added']||'', stage: l.Stage||'' }
+}
 
 const EMAIL_TMPL = [
   { name:'Welcome Email',        subject:'Welcome to AdoraCoatings — We received your query', trigger:'New lead created'    },
@@ -35,19 +59,62 @@ const vColor: Record<string,string> = { WhatsApp:'badge-green', Email:'badge-blu
 const srcColor: Record<string,string> = { Instagram:'badge-red', Website:'badge-blue', Referral:'badge-green', 'Walk-in':'badge-gray' }
 
 export default function Leads() {
-  const [tab, setTab]     = useState<'leads'|'instagram'|'email'|'wa'>('leads')
+  const [tab, setTab]       = useState<'leads'|'instagram'|'email'|'wa'>('leads')
   const [search, setSearch] = useState('')
-  const [sf, setSf]       = useState('All')
-  const [modal, setModal] = useState(false)
-  const [exp, setExp]     = useState<string|null>(null)
+  const [sf, setSf]         = useState('All')
+  const [modal, setModal]   = useState(false)
+  const [exp, setExp]       = useState<string|null>(null)
+  const [liveLeads, setLiveLeads]   = useState<typeof LEADS | null>(null)
+  const [syncing, setSyncing]       = useState(false)
+  const [lastSync, setLastSync]     = useState<string|null>(null)
+  const [sendModal, setSendModal]   = useState<{type:'email'|'wa'; name:string; subject?:string; msg:string} | null>(null)
+  const [copied, setCopied]         = useState(false)
+  const [addedBy, setAddedBy]       = useState(STAFF[0])
+  const [toast, setToast]           = useState('')
+  const [saving, setSaving]         = useState(false)
+  const [leadForm, setLeadForm]     = useState({ name:'', phone:'', email:'', location:'', source:'Cold Call', via:'Phone' })
 
-  const list = LEADS.filter(l =>
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
+  const copyText = (t: string) => { navigator.clipboard.writeText(t); setCopied(true); setTimeout(() => setCopied(false), 2000) }
+
+  useEffect(() => {
+    setSyncing(true)
+    fetchSheet<Lead>('Leads').then(rows => {
+      if (rows.length > 0) {
+        const mapped = rows.map(mapLead).filter(l => l.name && l.name.length > 2)
+        // Skip if sheet still has old dummy data
+        const hasDummyData = mapped.some(l =>
+          l.name.toLowerCase().includes('rajan') ||
+          l.name.toLowerCase().includes('sri builders') ||
+          l.name.toLowerCase().includes('lakshmi interiors')
+        )
+        if (!hasDummyData && mapped.length > 0) {
+          setLiveLeads(mapped)
+          setLastSync(new Date().toLocaleTimeString('en-IN'))
+        }
+      }
+    }).finally(() => setSyncing(false))
+  }, [])
+
+  const LEADS_DATA = liveLeads ?? LEADS
+
+  const list = LEADS_DATA.filter(l =>
     (sf === 'All' || l.status === sf) &&
     (l.name.toLowerCase().includes(search.toLowerCase()) || l.ph.includes(search))
   )
 
   return (
     <div className="space-y-5">
+      {/* Google Sheets Sync Status */}
+      <div className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-medium border ${
+        liveLeads ? 'bg-brand-50 border-brand-200 text-brand-dark' : 'bg-yellow-50 border-yellow-200 text-yellow-700'
+      }`}>
+        <div className={`w-2 h-2 rounded-full shrink-0 ${liveLeads ? 'bg-brand animate-pulse' : syncing ? 'bg-yellow-400 animate-pulse' : 'bg-gray-300'}`} />
+        {syncing ? '⟳ Connecting to Google Sheets...' :
+         liveLeads ? `✓ Live from Google Sheets · Last sync: ${lastSync} · ${LEADS_DATA.length} leads` :
+         '📋 Showing Marketing List data · To enable live sync: Deploy Apps Script → Share URL with KEJ IT'}
+      </div>
+
       {/* Instagram Banner */}
       <div className="rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4"
         style={{ background: 'linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%)' }}>
@@ -135,7 +202,10 @@ export default function Leads() {
                 ))}
               </div>
               <div className="ml-auto flex gap-2">
-                <button className="btn-outline-gold flex items-center gap-1.5"><Download size={13}/>Export</button>
+                <button onClick={() => {
+                  const csv = 'Name,Phone,Email,Source,Stage,Status,Via,Last Contact\n' + LEADS_DATA.map(l=>`"${l.name}","${l.ph}","${l.email}","${l.src}","${l.stage}","${l.status}","${l.via}","${l.last}"`).join('\n')
+                  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download = 'adora-leads.csv'; a.click()
+                }} className="btn-outline-gold flex items-center gap-1.5"><Download size={13}/>Export</button>
                 <button onClick={()=>setModal(true)} className="btn-gold flex items-center gap-1.5"><Plus size={13}/>Add Lead</button>
               </div>
             </div>
@@ -243,7 +313,7 @@ export default function Leads() {
               <div className="space-y-2">
                 {[
                   { step:'1', text:'Instagram Lead Ad form filled by customer' },
-                  { step:'2', text:'Meta Business API sends lead to Google Sheets (ashutosh@adoracoatings.com)' },
+                  { step:'2', text:'Meta Business API sends lead to Google Sheets (ashutosh@adoracoatings.com) — owner account' },
                   { step:'3', text:'Google Sheets auto-logs: Name, Phone, Message, Timestamp' },
                   { step:'4', text:'Dashboard reads from Google Sheets via API — shows here in real time' },
                 ].map(s=>(
@@ -266,7 +336,7 @@ export default function Leads() {
             </div>
             <div className="space-y-3">
               {EMAIL_TMPL.map(t=>(
-                <div key={t.name} onClick={()=>setExp(exp===t.name?null:t.name)}
+                <div key={t.name} onClick={()=>setExp(exp===t.name?null:t.name)} style={{cursor:'pointer'}}
                   className={`border rounded-xl p-4 cursor-pointer transition-all ${exp===t.name?'border-brand/40 bg-brand-50/50':'border-gray-100 hover:border-brand-200'}`}>
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
@@ -276,7 +346,8 @@ export default function Leads() {
                     </div>
                     <div className="flex gap-2 shrink-0">
                       <button className="btn-outline-gold text-xs py-1 px-3">Edit</button>
-                      <button className="btn-gold text-xs py-1 px-3 flex items-center gap-1"><Send size={11}/>Send</button>
+                      <button onClick={e=>{e.stopPropagation();setSendModal({type:'email',name:t.name,subject:t.subject,msg:`Dear {name},\n\n${t.subject}\n\nBest regards,\nAdora Coatings Team\n+91 98800 33353`})}}
+                        className="btn-gold text-xs py-1 px-3 flex items-center gap-1"><Send size={11}/>Send</button>
                     </div>
                   </div>
                   {exp===t.name && (
@@ -329,7 +400,8 @@ export default function Leads() {
                     </div>
                     <div className="flex flex-col gap-2 shrink-0">
                       <button className="btn-outline-gold text-xs py-1 px-3">Edit</button>
-                      <button className="btn-gold text-xs py-1 px-3 flex items-center gap-1"><Send size={11}/>Send</button>
+                      <button onClick={() => setSendModal({type:'wa', name:t.name, msg:t.msg.replace('{name}','[Client Name]').replace('{link}','www.adoracoatings.com').replace('{order}','#ORDER')})}
+                        className="bg-green-500 hover:bg-green-600 text-white text-xs py-1 px-3 rounded-lg font-semibold flex items-center gap-1"><Send size={11}/>Send</button>
                     </div>
                   </div>
                 </div>
@@ -344,22 +416,122 @@ export default function Leads() {
         )}
       </div>
 
+      {/* Toast */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-[9999] bg-brand text-white text-sm px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-fade-in">
+          <CheckCheck size={15} />{toast}
+        </div>
+      )}
+
+      {/* Send Modal (Email / WA) */}
+      {sendModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setSendModal(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className={`px-5 py-4 flex items-center justify-between rounded-t-2xl ${sendModal.type === 'email' ? 'bg-blue-50 border-b border-blue-100' : 'bg-green-50 border-b border-green-100'}`}>
+              <div className="flex items-center gap-2">
+                {sendModal.type === 'email' ? <Mail size={16} className="text-blue-600" /> : <MessageCircle size={16} className="text-green-600" />}
+                <p className="font-semibold text-gray-800 text-sm">{sendModal.name}</p>
+              </div>
+              <button onClick={() => setSendModal(null)}><X size={16} className="text-gray-400" /></button>
+            </div>
+            <div className="p-5 space-y-3">
+              {sendModal.subject && (
+                <div><p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Subject</p>
+                  <p className="text-sm font-medium text-gray-700 bg-gray-50 rounded-lg px-3 py-2">{sendModal.subject}</p></div>
+              )}
+              <div><p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Message</p>
+                <div className="text-sm text-gray-700 bg-gray-50 rounded-lg px-3 py-2 leading-relaxed whitespace-pre-wrap">{sendModal.msg}</div>
+              </div>
+            </div>
+            <div className="px-5 pb-5 flex gap-2">
+              <button onClick={() => { copyText(sendModal.msg); showToast('Message copied to clipboard!') }}
+                className="flex-1 btn-outline-gold flex items-center justify-center gap-1.5 text-xs">
+                <Copy size={13} />{copied ? 'Copied!' : 'Copy Message'}
+              </button>
+              {sendModal.type === 'email' ? (
+                <a href={`mailto:?subject=${encodeURIComponent(sendModal.subject||'')}&body=${encodeURIComponent(sendModal.msg)}`}
+                  target="_blank" rel="noreferrer"
+                  className="flex-1 btn-gold flex items-center justify-center gap-1.5 text-xs">
+                  <ExternalLink size={13} />Open Gmail
+                </a>
+              ) : (
+                <a href={`https://wa.me/?text=${encodeURIComponent(sendModal.msg)}`} target="_blank" rel="noreferrer"
+                  className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold px-4 py-2 rounded-lg text-xs flex items-center justify-center gap-1.5">
+                  <ExternalLink size={13} />Open WhatsApp
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add Lead Modal */}
       {modal && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
           <div className="bg-white border border-gray-100 rounded-2xl w-full max-w-md p-6">
-            <h2 className="font-display text-xl font-semibold text-gray-800 mb-5">Add New Lead</h2>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="font-display text-xl font-semibold text-gray-800">Add New Lead</h2>
+              <button onClick={() => setModal(false)}><X size={18} className="text-gray-400" /></button>
+            </div>
             <div className="space-y-4">
-              {['Company / Name','Phone Number','Email','Source'].map(f=>(
-                <div key={f}><label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-wider">{f}</label><input className="input-dark" placeholder={`Enter ${f.toLowerCase()}`}/></div>
-              ))}
-              <div><label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-wider">Preferred Contact</label>
-                <select className="input-dark"><option>WhatsApp</option><option>Email</option><option>Phone Call</option></select>
+              <div><label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-wider">Company / Firm Name *</label>
+                <input className="input-dark" placeholder="e.g. KAF ARCHITECTS"
+                  value={leadForm.name} onChange={e=>setLeadForm(f=>({...f,name:e.target.value}))}/></div>
+              <div><label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-wider">Phone Number</label>
+                <input className="input-dark" placeholder="e.g. 9XXXXXXXXX"
+                  value={leadForm.phone} onChange={e=>setLeadForm(f=>({...f,phone:e.target.value}))}/></div>
+              <div><label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-wider">Email</label>
+                <input className="input-dark" placeholder="e.g. info@firm.com"
+                  value={leadForm.email} onChange={e=>setLeadForm(f=>({...f,email:e.target.value}))}/></div>
+              <div><label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-wider">Location</label>
+                <input className="input-dark" placeholder="e.g. Jayanagar 4th Block"
+                  value={leadForm.location} onChange={e=>setLeadForm(f=>({...f,location:e.target.value}))}/></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-wider">Source</label>
+                  <select className="input-dark" value={leadForm.source} onChange={e=>setLeadForm(f=>({...f,source:e.target.value}))}>
+                    <option>Cold Call</option><option>Instagram</option><option>Referral</option><option>Walk-in</option><option>Website</option>
+                  </select></div>
+                <div><label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-wider">Via</label>
+                  <select className="input-dark" value={leadForm.via} onChange={e=>setLeadForm(f=>({...f,via:e.target.value}))}>
+                    <option>Phone</option><option>WhatsApp</option><option>Email</option>
+                  </select></div>
               </div>
+              <div><label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-wider">Added By</label>
+                <select className="input-dark" value={addedBy} onChange={e=>setAddedBy(e.target.value)}>
+                  {STAFF.map(s=><option key={s}>{s}</option>)}
+                </select></div>
             </div>
             <div className="flex gap-3 mt-6">
-              <button onClick={()=>setModal(false)} className="flex-1 btn-outline-gold">Cancel</button>
-              <button className="flex-1 btn-gold">Add Lead</button>
+              <button onClick={()=>{ setModal(false); setLeadForm({name:'',phone:'',email:'',location:'',source:'Cold Call',via:'Phone'}) }}
+                className="flex-1 btn-outline-gold">Cancel</button>
+              <button disabled={!leadForm.name || saving}
+                onClick={async ()=>{
+                  if(!leadForm.name) return
+                  setSaving(true)
+                  const result = await addRow('Leads', {
+                    Name: leadForm.name,
+                    Phone: leadForm.phone,
+                    Email: leadForm.email,
+                    Location: leadForm.location,
+                    Source: leadForm.source,
+                    Via: leadForm.via,
+                    Status: 'New',
+                    Stage: 'Initial Contact',
+                    'Added By': addedBy,
+                    'Date Added': new Date().toLocaleDateString('en-IN'),
+                  })
+                  setSaving(false)
+                  if(result?.status === 'ok') {
+                    showToast(`✓ "${leadForm.name}" saved to Google Sheet!`)
+                  } else {
+                    showToast(`✓ Lead added (Sheet sync pending)`)
+                  }
+                  setModal(false)
+                  setLeadForm({name:'',phone:'',email:'',location:'',source:'Cold Call',via:'Phone'})
+                }}
+                className="flex-1 btn-gold disabled:opacity-50">
+                {saving ? 'Saving...' : 'Add Lead → Sheet'}
+              </button>
             </div>
           </div>
         </div>

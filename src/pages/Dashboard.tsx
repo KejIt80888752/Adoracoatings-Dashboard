@@ -72,8 +72,8 @@ export default function Dashboard() {
             <AreaChart data={revenueData}>
               <defs>
                 <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#2a7b7b" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#2a7b7b" stopOpacity={0}    />
+                  <stop offset="5%"  stopColor="#4a7c1f" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#4a7c1f" stopOpacity={0}    />
                 </linearGradient>
                 <linearGradient id="profGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%"  stopColor="#22c55e" stopOpacity={0.15} />
@@ -84,7 +84,7 @@ export default function Dashboard() {
               <XAxis dataKey="m" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} tickFormatter={v => `₹${(v/100000).toFixed(1)}L`} />
               <Tooltip contentStyle={tipStyle} formatter={(v: number) => [fmt(v)]} />
-              <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#2a7b7b" strokeWidth={2.5} fill="url(#revGrad)" dot={{ r: 3, fill: '#2a7b7b', strokeWidth: 0 }} />
+              <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#4a7c1f" strokeWidth={2.5} fill="url(#revGrad)" dot={{ r: 3, fill: '#4a7c1f', strokeWidth: 0 }} />
               <Area type="monotone" dataKey="profit"  name="Profit"  stroke="#22c55e" strokeWidth={2}   fill="url(#profGrad)" dot={{ r: 3, fill: '#22c55e',  strokeWidth: 0 }} />
             </AreaChart>
           </ResponsiveContainer>
@@ -104,7 +104,7 @@ export default function Dashboard() {
               <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={false} tickLine={false} tickFormatter={v => `₹${(v/100000).toFixed(1)}L`} />
               <Tooltip contentStyle={tipStyle} formatter={(v: number) => [fmt(v), 'Amount']} />
-              <Bar dataKey="v" fill="#2a7b7b" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="v" fill="#4a7c1f" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

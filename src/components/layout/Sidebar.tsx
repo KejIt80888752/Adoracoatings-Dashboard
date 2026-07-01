@@ -4,17 +4,19 @@ import {
   LayoutDashboard, Package, Image, Users,
   ShoppingCart, TrendingUp, Settings, LogOut, X,
   FileText, Receipt, ShoppingBag, CreditCard,
-  BarChart2, FileSpreadsheet, UserCog,
+  BarChart2, FileSpreadsheet, UserCog, Building2, Warehouse,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const NAV = [
   { to: '/',                 icon: LayoutDashboard, label: 'Dashboard'            },
-  { to: '/products',         icon: Package,         label: 'Products & Inventory' },
+  { to: '/products',         icon: Package,         label: 'Products'             },
+  { to: '/inventory',        icon: Warehouse,       label: 'Stock & Inventory'    },
   { to: '/portfolio',        icon: Image,           label: 'Portfolio'            },
   { to: '/quotation',        icon: FileText,        label: 'Quotation'            },
   { to: '/billing',          icon: Receipt,         label: 'Billing / Invoice'    },
   { to: '/leads',            icon: Users,           label: 'Lead Generation'      },
+  { to: '/clients',          icon: Building2,       label: 'B2B & B2C Clients'    },
   { to: '/sales-reports',    icon: TrendingUp,      label: 'Sales Reports'        },
   { to: '/purchase-reports', icon: ShoppingBag,     label: 'Purchase Reports'     },
   { to: '/outstanding',      icon: CreditCard,      label: 'Outstanding'          },
@@ -44,21 +46,22 @@ export default function Sidebar({ open, onClose }: Props) {
         open ? 'translate-x-0' : '-translate-x-full'
       )}>
 
-        {/* Logo — teal background so white logo is visible */}
-        <div className="flex items-center justify-between px-4 h-16 border-b border-gray-100 shrink-0 bg-brand">
+        {/* Logo */}
+        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 shrink-0 bg-white min-h-[72px]">
           <img
-            src="https://www.adoracoatings.com/assets/images/AA0030/dynamic/companylogos/ar9x2/Adora-Coatings-Logo-White.png"
-            alt="AdoraCoatings"
-            className="h-9 object-contain object-left"
+            src={`${import.meta.env.BASE_URL}adora-logo.png`}
+            alt="Adora Coatings"
+            className="w-40 object-contain object-left"
             onError={e => {
               e.currentTarget.style.display = 'none'
               e.currentTarget.nextElementSibling!.classList.remove('hidden')
             }}
           />
-          <div className="hidden">
-            <p className="font-display font-bold text-white text-sm">AdoraCoatings</p>
+          <div className="hidden flex flex-col leading-tight">
+            <span className="font-display font-bold text-brand-dark text-base leading-none">Adora</span>
+            <span className="text-[10px] font-semibold text-brand-light tracking-widest uppercase">Coatings</span>
           </div>
-          <button onClick={onClose} className="lg:hidden text-white/70 hover:text-white p-1">
+          <button onClick={onClose} className="lg:hidden text-gray-400 hover:text-gray-600 p-1 shrink-0">
             <X size={16} />
           </button>
         </div>

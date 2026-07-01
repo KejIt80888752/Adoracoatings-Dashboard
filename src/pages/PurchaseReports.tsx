@@ -41,7 +41,7 @@ export default function PurchaseReports() {
         </div>
         <div className="card-sm">
           <div className="text-xs text-gray-500 mb-1">Total Labour Expense</div>
-          <div className="text-2xl font-bold text-teal-600">₹1,66,960</div>
+          <div className="text-2xl font-bold text-brand">₹1,66,960</div>
         </div>
         <div className="card-sm">
           <div className="text-xs text-gray-500 mb-1">Total Misc Expense</div>
@@ -61,7 +61,7 @@ export default function PurchaseReports() {
               <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full"
-                  style={{ width: `${(p.matExp / maxMat) * 100}%`, backgroundColor: '#2a7b7b' }}
+                  style={{ width: `${(p.matExp / maxMat) * 100}%`, backgroundColor: '#4a7c1f' }}
                 />
               </div>
             </div>

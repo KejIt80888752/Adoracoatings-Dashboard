@@ -1,6 +1,8 @@
-import { useState } from 'react'
-import { Search, Warehouse, Package2, AlertCircle, Plus, X, CheckCheck, ArrowRight, RotateCcw, Truck } from 'lucide-react'
-import { addRow } from '../lib/api'
+import { useState, useEffect, useCallback } from 'react'
+import { Search, Warehouse, Package2, AlertCircle, Plus, X, CheckCheck, ArrowRight, RotateCcw, Truck, RefreshCw } from 'lucide-react'
+import { addRow, fetchSheet } from '../lib/api'
+
+type StockLogRow = { Product: string; Location: string; Qty: number | string }
 
 type StockItem = {
   sl: number; name: string; unit: string; packSize: string
@@ -75,6 +77,8 @@ export default function Inventory() {
   const [transferModal, setTransferModal] = useState<StockItem | null>(null)
   const [toast, setToast]       = useState('')
   const [saving, setSaving]     = useState(false)
+  const [syncing, setSyncing]   = useState(false)
+  const [lastSynced, setLastSynced] = useState('')
 
   // Add stock form
   const [form, setForm]         = useState({ product:'', location:'Godown', qty:'', notes:'' })
@@ -89,6 +93,34 @@ export default function Inventory() {
   const [transDir, setTransDir] = useState<'godown-to-sea'|'sea-to-godown'>('godown-to-sea')
 
   const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(''), 3500) }
+
+  // Pull stock movement history from the Google Sheet and replay it on top of
+  // the physical-audit baseline (INITIAL_STOCK), so a page reload doesn't lose
+  // any Add Stock / Dispatch / Return / Transfer actions logged since the audit.
+  const syncFromSheet = useCallback(async (silent = false) => {
+    setSyncing(true)
+    const rows = await fetchSheet<StockLogRow>('Stock')
+    if (rows.length > 0) {
+      setStock(() => {
+        const next = INITIAL_STOCK.map(s => ({ ...s }))
+        for (const row of rows) {
+          const item = next.find(s => s.name === row.Product)
+          if (!item) continue
+          const qty = Number(row.Qty) || 0
+          if (row.Location === 'Godown')                    { item.godownQty += qty; item.godownKg += qty }
+          else if (row.Location === 'Sea Air Logistics')     { item.seaAirQty += qty; item.seaAirKg += qty }
+          else if (row.Location === 'Dispatch')              { item.dispatch += qty }
+          else if (row.Location?.startsWith('Return'))       { item.productReturn += qty; item.godownQty += qty; item.godownKg += qty }
+        }
+        return next
+      })
+    }
+    setSyncing(false)
+    setLastSynced(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }))
+    if (!silent) showToast(rows.length > 0 ? `✓ Synced ${rows.length} entries from Google Sheet` : 'No Sheet data found — showing local stock')
+  }, [])
+
+  useEffect(() => { syncFromSheet(true) }, [syncFromSheet])
 
   const totalGodown = stock.reduce((a,s) => a + s.godownKg, 0)
   const totalSea    = stock.reduce((a,s) => a + s.seaAirKg, 0)
@@ -222,6 +254,12 @@ export default function Inventory() {
                   </button>
                 ))}
               </div>
+              <button onClick={() => syncFromSheet()} disabled={syncing}
+                className="text-xs px-3 py-1.5 rounded-lg font-medium border flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+                style={{color:'var(--text-3)', borderColor:'var(--border-2)'}} title="Re-fetch stock movements from Google Sheet">
+                <RefreshCw size={12} className={syncing ? 'animate-spin' : ''}/>
+                {syncing ? 'Syncing…' : lastSynced ? `Synced ${lastSynced}` : 'Sync'}
+              </button>
               <button onClick={() => setAddModal(true)} className="btn-gold flex items-center gap-1.5 text-xs shrink-0">
                 <Plus size={13}/> Add Stock
               </button>

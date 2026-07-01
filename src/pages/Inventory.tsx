@@ -234,12 +234,12 @@ export default function Inventory() {
                     <th>#</th>
                     <th>Product Name</th>
                     <th>Pack Size</th>
-                    <th className="text-center" style={{background:'rgba(59,130,246,0.06)'}}>Godown Qty</th>
-                    <th className="text-center" style={{background:'rgba(59,130,246,0.06)'}}>Godown Kg/L</th>
                     <th className="text-center" style={{background:'rgba(139,92,246,0.06)'}}>Sea Air Qty</th>
                     <th className="text-center" style={{background:'rgba(139,92,246,0.06)'}}>Sea Air Kg/L</th>
+                    <th className="text-center" style={{background:'rgba(59,130,246,0.06)'}}>Godown Qty</th>
+                    <th className="text-center" style={{background:'rgba(59,130,246,0.06)'}}>Godown Kg/L</th>
                     <th className="text-center" style={{background:'rgba(239,68,68,0.06)'}}>Dispatch</th>
-                    <th className="text-center" style={{background:'rgba(16,185,129,0.06)'}}>Return</th>
+                    <th className="text-center" style={{background:'rgba(16,185,129,0.06)'}}>Product Return</th>
                     <th className="text-center font-bold">Total Kg/L</th>
                     <th className="text-center">Status</th>
                     <th className="text-center">Transfer</th>
@@ -254,10 +254,10 @@ export default function Inventory() {
                         <td className="text-center text-xs" style={{color:'var(--text-4)'}}>{String(s.sl).padStart(2,'0')}</td>
                         <td><span className="font-medium" style={{color:'var(--text-1)'}}>{s.name}</span></td>
                         <td className="text-xs font-mono" style={{color:'var(--text-3)'}}>{s.packSize}</td>
-                        <td className="text-center font-semibold text-blue-600">{s.godownQty || '—'}</td>
-                        <td className="text-center text-blue-500 text-sm">{s.godownKg || '—'}</td>
                         <td className="text-center font-semibold text-purple-600">{s.seaAirQty || '—'}</td>
                         <td className="text-center text-purple-500 text-sm">{s.seaAirKg || '—'}</td>
+                        <td className="text-center font-semibold text-blue-600">{s.godownQty || '—'}</td>
+                        <td className="text-center text-blue-500 text-sm">{s.godownKg || '—'}</td>
                         <td className="text-center">{s.dispatch > 0 ? <span className="text-red-500 font-semibold">{s.dispatch}</span> : <span style={{color:'var(--text-4)'}}>—</span>}</td>
                         <td className="text-center">{s.productReturn > 0 ? <span className="text-green-500 font-semibold">{s.productReturn}</span> : <span style={{color:'var(--text-4)'}}>—</span>}</td>
                         <td className="text-center font-bold text-brand">{total || '0'}</td>

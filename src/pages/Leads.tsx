@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Plus, Search, Mail, MessageCircle, Phone, Send, Clock, CheckCheck, Filter, Download, User, Instagram, Link, TrendingUp, X, Copy, ExternalLink } from 'lucide-react'
-import { fetchSheet, addRow } from '../lib/api'
+import { Plus, Search, Mail, MessageCircle, Phone, Send, Clock, CheckCheck, Filter, Download, User, Instagram, Link, X, Copy, ExternalLink, RefreshCw, Heart } from 'lucide-react'
+import { fetchSheet, addRow, syncInstagram } from '../lib/api'
+
+type IgProfile = { Username: string; Name: string; Biography: string; Followers: number; 'Media Count': number; 'Synced At': string }
+type IgMedia = { Caption: string; Type: string; Likes: number; Comments: number; 'Posted At': string; Link: string }
 
 const STAFF = ['Abhishek (Marketing)', 'Muniraj Sir (Supervisor)', 'Anil Sir (Supervisor)', 'Ashutosh Mehraa (Admin)']
 
@@ -73,9 +76,26 @@ export default function Leads() {
   const [toast, setToast]           = useState('')
   const [saving, setSaving]         = useState(false)
   const [leadForm, setLeadForm]     = useState({ name:'', phone:'', email:'', location:'', source:'Cold Call', via:'Phone' })
+  const [igProfile, setIgProfile]   = useState<IgProfile | null>(null)
+  const [igMedia, setIgMedia]       = useState<IgMedia[]>([])
+  const [igSyncing, setIgSyncing]   = useState(false)
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const copyText = (t: string) => { navigator.clipboard.writeText(t); setCopied(true); setTimeout(() => setCopied(false), 2000) }
+
+  const loadInstagram = () => {
+    fetchSheet<IgProfile>('InstagramProfile').then(rows => setIgProfile(rows[0] ?? null))
+    fetchSheet<IgMedia>('InstagramMedia').then(rows => setIgMedia(rows))
+  }
+
+  const handleInstagramSync = async () => {
+    setIgSyncing(true)
+    const res = await syncInstagram()
+    if (res.error) showToast(`✗ Instagram sync failed: ${res.error}`)
+    else showToast(`✓ Synced ${res.profile} — ${res.mediaCount} posts`)
+    loadInstagram()
+    setIgSyncing(false)
+  }
 
   useEffect(() => {
     setSyncing(true)
@@ -94,6 +114,7 @@ export default function Leads() {
         }
       }
     }).finally(() => setSyncing(false))
+    loadInstagram()
   }, [])
 
   const LEADS_DATA = liveLeads ?? LEADS
@@ -115,38 +136,40 @@ export default function Leads() {
          '📋 Showing Marketing List data · To enable live sync: Deploy Apps Script → Share URL with KEJ IT'}
       </div>
 
-      {/* Instagram Banner */}
+      {/* Instagram Banner — live profile data */}
       <div className="rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4"
         style={{ background: 'linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%)' }}>
         <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
           <Instagram size={26} className="text-white" />
         </div>
         <div className="flex-1">
-          <p className="text-white font-bold text-base">Instagram Leads Connected</p>
+          <p className="text-white font-bold text-base">
+            {igProfile ? `@${igProfile.Username} — Live from Instagram` : 'Instagram not synced yet'}
+          </p>
           <p className="text-white/80 text-xs mt-0.5">
-            {LEADS.filter(l=>l.src==='Instagram').length} leads this month from Instagram · Meta Business API via Google Sheets sync
+            {igProfile
+              ? `Synced ${new Date(igProfile['Synced At']).toLocaleString('en-IN')} · Profile stats + recent posts pulled directly from Instagram Graph API`
+              : 'Click Sync to pull live profile + post data from Instagram'}
           </p>
         </div>
         <div className="flex gap-3">
           <div className="text-center">
-            <p className="text-white font-bold text-xl">{LEADS.filter(l=>l.src==='Instagram').length}</p>
-            <p className="text-white/70 text-[10px]">This Month</p>
+            <p className="text-white font-bold text-xl">{igProfile?.Followers ?? '—'}</p>
+            <p className="text-white/70 text-[10px]">Followers</p>
           </div>
           <div className="text-center">
-            <p className="text-white font-bold text-xl">3</p>
-            <p className="text-white/70 text-[10px]">Converted</p>
+            <p className="text-white font-bold text-xl">{igProfile?.['Media Count'] ?? '—'}</p>
+            <p className="text-white/70 text-[10px]">Posts</p>
           </div>
           <div className="text-center">
-            <p className="text-white font-bold text-xl">60%</p>
-            <p className="text-white/70 text-[10px]">Conversion</p>
+            <p className="text-white font-bold text-xl">{igMedia.length || '—'}</p>
+            <p className="text-white/70 text-[10px]">Recent Pulled</p>
           </div>
         </div>
         <div className="flex gap-2 shrink-0">
-          <button className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs px-3 py-2 rounded-lg font-medium transition-colors">
-            <Link size={12}/> Connect API
-          </button>
-          <button className="flex items-center gap-1.5 bg-white text-purple-600 text-xs px-3 py-2 rounded-lg font-bold transition-colors hover:bg-white/90">
-            <TrendingUp size={12}/> View Stats
+          <button onClick={handleInstagramSync} disabled={igSyncing}
+            className="flex items-center gap-1.5 bg-white text-purple-600 text-xs px-3 py-2 rounded-lg font-bold transition-colors hover:bg-white/90 disabled:opacity-60">
+            <RefreshCw size={12} className={igSyncing ? 'animate-spin' : ''}/> {igSyncing ? 'Syncing...' : 'Sync Now'}
           </button>
         </div>
       </div>
@@ -251,21 +274,25 @@ export default function Leads() {
               style={{ background: 'linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%)' }}>
               <Instagram size={32} className="text-white shrink-0"/>
               <div>
-                <p className="text-white font-bold">Meta Business API — Instagram Lead Ads</p>
-                <p className="text-white/75 text-xs mt-0.5">Leads from Instagram DMs and Lead Ad forms flow here automatically via Google Sheets sync</p>
+                <p className="text-white font-bold">{igProfile ? `@${igProfile.Username}` : 'Instagram Graph API'}</p>
+                <p className="text-white/75 text-xs mt-0.5">
+                  {igProfile ? igProfile.Biography : 'Live profile stats + recent posts pulled directly from Instagram'}
+                </p>
               </div>
               <div className="ml-auto flex items-center gap-2">
-                <div className="w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse"/>
-                <span className="text-white text-xs font-medium">Live Sync Active</span>
+                <button onClick={handleInstagramSync} disabled={igSyncing}
+                  className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-60">
+                  <RefreshCw size={12} className={igSyncing ? 'animate-spin' : ''}/> {igSyncing ? 'Syncing...' : 'Sync Now'}
+                </button>
               </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label:'Total Instagram Leads', val: LEADS.filter(l=>l.src==='Instagram').length, color:'text-purple-600' },
-                { label:'Hot',    val: LEADS.filter(l=>l.src==='Instagram'&&l.status==='Hot').length,  color:'text-red-500'    },
-                { label:'Warm',   val: LEADS.filter(l=>l.src==='Instagram'&&l.status==='Warm').length, color:'text-yellow-500' },
-                { label:'Converted',val: 3, color:'text-green-600' },
+                { label:'Followers',    val: igProfile?.Followers ?? '—',      color:'text-purple-600' },
+                { label:'Total Posts',  val: igProfile?.['Media Count'] ?? '—', color:'text-pink-500'   },
+                { label:'Recent Pulled',val: igMedia.length,                    color:'text-yellow-600' },
+                { label:'Total Engagement', val: igMedia.reduce((s,m)=>s+Number(m.Likes||0)+Number(m.Comments||0),0), color:'text-green-600' },
               ].map(s=>(
                 <div key={s.label} className="card text-center">
                   <p className={`text-2xl font-bold ${s.color}`}>{s.val}</p>
@@ -274,32 +301,25 @@ export default function Leads() {
               ))}
             </div>
 
+            {/* Recent Posts — real data pulled from Instagram */}
             <div className="overflow-x-auto card p-0">
               <table className="tbl w-full">
-                <thead><tr><th>Name</th><th>Phone</th><th>Stage</th><th>Status</th><th>Via</th><th>Last Contact</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Caption</th><th>Type</th><th>Likes</th><th>Comments</th><th>Posted</th><th>Link</th></tr></thead>
                 <tbody>
-                  {LEADS.filter(l=>l.src==='Instagram').map(l=>(
-                    <tr key={l.id}>
-                      <td className="font-medium text-gray-800">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
-                            style={{background:'linear-gradient(135deg,#833ab4,#fd1d1d)'}}>
-                            {l.name[0]}
-                          </div>
-                          {l.name}
-                        </div>
-                      </td>
-                      <td className="text-gray-400 text-xs">{l.ph}</td>
-                      <td className="text-gray-600">{l.stage}</td>
-                      <td><span className={sColor[l.status]}>{l.status}</span></td>
-                      <td><span className={vColor[l.via]}>{l.via}</span></td>
-                      <td className="text-gray-500 text-xs"><div className="flex items-center gap-1"><Clock size={11}/>{l.last}</div></td>
+                  {igMedia.length === 0 && (
+                    <tr><td colSpan={6} className="text-center text-gray-400 py-6">No posts synced yet — click Sync Now above.</td></tr>
+                  )}
+                  {igMedia.map((m,i)=>(
+                    <tr key={i}>
+                      <td className="font-medium text-gray-800 max-w-[280px] truncate">{m.Caption || <span className="text-gray-400">—</span>}</td>
+                      <td className="text-gray-500 text-xs">{m.Type}</td>
+                      <td className="text-gray-600"><div className="flex items-center gap-1"><Heart size={11} className="text-red-400"/>{m.Likes}</div></td>
+                      <td className="text-gray-600">{m.Comments}</td>
+                      <td className="text-gray-500 text-xs"><div className="flex items-center gap-1"><Clock size={11}/>{new Date(m['Posted At']).toLocaleDateString('en-IN')}</div></td>
                       <td>
-                        <div className="flex gap-1">
-                          <button className="p-1.5 text-gray-400 hover:text-brand hover:bg-brand/10 rounded-lg" title="Email"><Mail size={13}/></button>
-                          <button className="p-1.5 text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-lg" title="WhatsApp"><MessageCircle size={13}/></button>
-                          <button className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg" title="Call"><Phone size={13}/></button>
-                        </div>
+                        <a href={m.Link} target="_blank" rel="noreferrer" className="p-1.5 inline-flex text-gray-400 hover:text-purple-500 hover:bg-purple-50 rounded-lg" title="Open on Instagram">
+                          <ExternalLink size={13}/>
+                        </a>
                       </td>
                     </tr>
                   ))}
@@ -307,22 +327,15 @@ export default function Leads() {
               </table>
             </div>
 
-            {/* Setup Guide */}
+            {/* Info note */}
             <div className="card border border-purple-200 bg-purple-50/40">
-              <p className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><Link size={15} className="text-purple-500"/>How Instagram Leads Connect to Dashboard</p>
-              <div className="space-y-2">
-                {[
-                  { step:'1', text:'Instagram Lead Ad form filled by customer' },
-                  { step:'2', text:'Meta Business API sends lead to Google Sheets (ashutosh@adoracoatings.com) — owner account' },
-                  { step:'3', text:'Google Sheets auto-logs: Name, Phone, Message, Timestamp' },
-                  { step:'4', text:'Dashboard reads from Google Sheets via API — shows here in real time' },
-                ].map(s=>(
-                  <div key={s.step} className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-purple-600 text-white text-xs font-bold flex items-center justify-center shrink-0">{s.step}</div>
-                    <p className="text-sm text-gray-600 pt-0.5">{s.text}</p>
-                  </div>
-                ))}
-              </div>
+              <p className="font-semibold text-gray-700 mb-2 flex items-center gap-2"><Link size={15} className="text-purple-500"/>About this data</p>
+              <p className="text-sm text-gray-600">
+                This account has no linked Facebook Page, so Instagram's Messaging API (DMs) can't be read via this connection.
+                What you see above is live profile stats and recent public posts pulled directly from the Instagram Graph API —
+                real engagement numbers, not sample data. DM-based lead capture would need a Facebook Page linked to this Instagram
+                account plus additional app review from Meta.
+              </p>
             </div>
           </div>
         )}

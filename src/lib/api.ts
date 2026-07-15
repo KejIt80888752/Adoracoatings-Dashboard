@@ -32,3 +32,13 @@ export async function addRow(sheet: string, rowData: Record<string, unknown>) {
     return { error: 'Failed to add row' }
   }
 }
+
+// ── Trigger a live Instagram profile + media pull (GET) ───────────
+export async function syncInstagram() {
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=syncInstagram`)
+    return await res.json()
+  } catch {
+    return { error: 'Failed to sync Instagram' }
+  }
+}

@@ -43,3 +43,17 @@ export async function syncInstagram() {
     return { error: 'Failed to sync Instagram' }
   }
 }
+
+// ── Delete a row from a sheet by its row number (POST) ────────────
+// rowIndex is the actual sheet row number (header = row 1, first data row = row 2).
+export async function deleteRow(sheet: string, rowIndex: number) {
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'deleteRow', sheet, rowIndex, key: API_KEY }),
+    })
+    return await res.json()
+  } catch {
+    return { error: 'Failed to delete row' }
+  }
+}

@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
-import { Plus, Search, Mail, MessageCircle, Phone, Send, Clock, CheckCheck, Filter, Download, User, Instagram, Link, X, Copy, ExternalLink, RefreshCw, Heart } from 'lucide-react'
-import { fetchSheet, addRow, syncInstagram } from '../lib/api'
+import { Plus, Search, Mail, MessageCircle, Phone, Send, Clock, CheckCheck, Filter, Download, User, Instagram, Link, X, Copy, ExternalLink, RefreshCw, Heart, Trash2 } from 'lucide-react'
+import { fetchSheet, addRow, syncInstagram, deleteRow } from '../lib/api'
 
 type IgProfile = { Username: string; Name: string; Biography: string; Followers: number; 'Media Count': number; 'Synced At': string }
 type IgMedia = { Caption: string; Type: string; Likes: number; Comments: number; 'Posted At': string; Link: string }
 
 const STAFF = ['Abhishek (Marketing)', 'Muniraj Sir (Supervisor)', 'Anil Sir (Supervisor)', 'Ashutosh Mehraa (Admin)']
 
-type Lead = { ID: string; Name: string; Phone: string; Email: string; Source: string; Status: string; Stage: string; Via: string; 'Date Added': string }
+type Lead = { ID: string; Name: string; Phone: string; Email: string; Source: string; Status: string; Stage: string; Via: string; 'Date Added': string; Notes?: string }
 
 const LEADS = [
   { id:1,  name:'KAF ARCHITECTS',                     ph:'080 2244 2734',   email:'kembhaviarchitects@gmail.com',     src:'Cold Call', status:'Hot',  via:'Phone', last:'Jan 2026', stage:'Follow-Up'     },
@@ -38,7 +38,8 @@ const LEADS = [
 ]
 
 function mapLead(l: Lead, i: number) {
-  return { id: i+1, name: l.Name||'', ph: l.Phone||'', email: l.Email||'', src: l.Source||'', status: l.Status||'New', via: l.Via||'', last: l['Date Added']||'', stage: l.Stage||'' }
+  // Row 1 in the sheet is the header, so data row i (0-based) sits at sheet row i+2.
+  return { id: i+1, rowIndex: i+2, name: l.Name||'', ph: l.Phone||'', email: l.Email||'', src: l.Source||'', status: l.Status||'New', via: l.Via||'', last: l['Date Added']||'', stage: l.Stage||'', notes: l.Notes||'' }
 }
 
 const EMAIL_TMPL = [
@@ -67,7 +68,7 @@ export default function Leads() {
   const [sf, setSf]         = useState('All')
   const [modal, setModal]   = useState(false)
   const [exp, setExp]       = useState<string|null>(null)
-  const [liveLeads, setLiveLeads]   = useState<typeof LEADS | null>(null)
+  const [liveLeads, setLiveLeads]   = useState<(typeof LEADS[number] & { rowIndex?: number; notes?: string })[] | null>(null)
   const [syncing, setSyncing]       = useState(false)
   const [lastSync, setLastSync]     = useState<string|null>(null)
   const [sendModal, setSendModal]   = useState<{type:'email'|'wa'; name:string; subject?:string; msg:string} | null>(null)
@@ -75,10 +76,11 @@ export default function Leads() {
   const [addedBy, setAddedBy]       = useState(STAFF[0])
   const [toast, setToast]           = useState('')
   const [saving, setSaving]         = useState(false)
-  const [leadForm, setLeadForm]     = useState({ name:'', phone:'', email:'', location:'', source:'Cold Call', via:'Phone' })
+  const [leadForm, setLeadForm]     = useState({ name:'', phone:'', email:'', location:'', source:'Cold Call', via:'Phone', notes:'' })
   const [igProfile, setIgProfile]   = useState<IgProfile | null>(null)
   const [igMedia, setIgMedia]       = useState<IgMedia[]>([])
   const [igSyncing, setIgSyncing]   = useState(false)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const copyText = (t: string) => { navigator.clipboard.writeText(t); setCopied(true); setTimeout(() => setCopied(false), 2000) }
@@ -97,7 +99,7 @@ export default function Leads() {
     setIgSyncing(false)
   }
 
-  useEffect(() => {
+  const loadLeads = () => {
     setSyncing(true)
     fetchSheet<Lead>('Leads').then(rows => {
       if (rows.length > 0) {
@@ -111,13 +113,35 @@ export default function Leads() {
         if (!hasDummyData && mapped.length > 0) {
           setLiveLeads(mapped)
           setLastSync(new Date().toLocaleTimeString('en-IN'))
+        } else if (mapped.length === 0) {
+          setLiveLeads([])
         }
+      } else {
+        setLiveLeads([])
       }
     }).finally(() => setSyncing(false))
+  }
+
+  const handleDeleteLead = async (l: { id: number; rowIndex?: number; name: string }) => {
+    if (!l.rowIndex) return
+    if (!confirm(`Delete lead "${l.name}"? This can't be undone.`)) return
+    setDeletingId(l.id)
+    const result = await deleteRow('Leads', l.rowIndex)
+    setDeletingId(null)
+    if (result?.status === 'ok') {
+      showToast(`✓ "${l.name}" deleted`)
+      loadLeads()
+    } else {
+      showToast(`✗ Failed to delete: ${result?.error || 'unknown error'}`)
+    }
+  }
+
+  useEffect(() => {
+    loadLeads()
     loadInstagram()
   }, [])
 
-  const LEADS_DATA = liveLeads ?? LEADS
+  const LEADS_DATA: (typeof LEADS[number] & { rowIndex?: number; notes?: string })[] = liveLeads ?? LEADS
 
   const list = LEADS_DATA.filter(l =>
     (sf === 'All' || l.status === sf) &&
@@ -257,6 +281,12 @@ export default function Leads() {
                           <button className="p-1.5 text-gray-600 hover:text-brand hover:bg-brand-50 rounded-lg transition-colors" title="Email"><Mail size={13}/></button>
                           <button className="p-1.5 text-gray-600 hover:text-green-400 hover:bg-green-500/10 rounded-lg transition-colors" title="WhatsApp"><MessageCircle size={13}/></button>
                           <button className="p-1.5 text-gray-600 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors" title="Call"><Phone size={13}/></button>
+                          {l.rowIndex && (
+                            <button onClick={() => handleDeleteLead(l)} disabled={deletingId === l.id}
+                              className="p-1.5 text-gray-600 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40" title="Delete lead">
+                              <Trash2 size={13}/>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -513,9 +543,12 @@ export default function Leads() {
                 <select className="input-dark" value={addedBy} onChange={e=>setAddedBy(e.target.value)}>
                   {STAFF.map(s=><option key={s}>{s}</option>)}
                 </select></div>
+              <div><label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-wider">Notes / Message</label>
+                <textarea className="input-dark" rows={3} placeholder="Any additional notes or message about this lead..."
+                  value={leadForm.notes} onChange={e=>setLeadForm(f=>({...f,notes:e.target.value}))}/></div>
             </div>
             <div className="flex gap-3 mt-6">
-              <button onClick={()=>{ setModal(false); setLeadForm({name:'',phone:'',email:'',location:'',source:'Cold Call',via:'Phone'}) }}
+              <button onClick={()=>{ setModal(false); setLeadForm({name:'',phone:'',email:'',location:'',source:'Cold Call',via:'Phone',notes:''}) }}
                 className="flex-1 btn-outline-gold">Cancel</button>
               <button disabled={!leadForm.name || saving}
                 onClick={async ()=>{
@@ -532,15 +565,17 @@ export default function Leads() {
                     Stage: 'Initial Contact',
                     'Added By': addedBy,
                     'Date Added': new Date().toLocaleDateString('en-IN'),
+                    Notes: leadForm.notes,
                   })
                   setSaving(false)
                   if(result?.status === 'ok') {
                     showToast(`✓ "${leadForm.name}" saved to Google Sheet!`)
+                    loadLeads()
                   } else {
                     showToast(`✓ Lead added (Sheet sync pending)`)
                   }
                   setModal(false)
-                  setLeadForm({name:'',phone:'',email:'',location:'',source:'Cold Call',via:'Phone'})
+                  setLeadForm({name:'',phone:'',email:'',location:'',source:'Cold Call',via:'Phone',notes:''})
                 }}
                 className="flex-1 btn-gold disabled:opacity-50">
                 {saving ? 'Saving...' : 'Add Lead → Sheet'}

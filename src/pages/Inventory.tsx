@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Search, Warehouse, Package2, AlertCircle, Plus, X, CheckCheck, ArrowRight, RotateCcw, Truck, RefreshCw } from 'lucide-react'
-import { addRow, fetchSheet } from '../lib/api'
+import { Search, Warehouse, Package2, AlertCircle, Plus, X, CheckCheck, ArrowRight, RotateCcw, Truck, RefreshCw, Trash2 } from 'lucide-react'
+import { addRow, fetchSheet, deleteRow } from '../lib/api'
 
-type StockLogRow = { Product: string; Location: string; Qty: number | string }
+type StockLogRow = { Product: string; Location: string; Qty: number | string; Notes?: string; 'Updated By'?: string; Date?: string }
+type StockLogEntry = StockLogRow & { rowIndex: number }
 
 type StockItem = {
   sl: number; name: string; unit: string; packSize: string
@@ -79,6 +80,8 @@ export default function Inventory() {
   const [saving, setSaving]     = useState(false)
   const [syncing, setSyncing]   = useState(false)
   const [lastSynced, setLastSynced] = useState('')
+  const [logEntries, setLogEntries] = useState<StockLogEntry[]>([])
+  const [deletingRow, setDeletingRow] = useState<number | null>(null)
 
   // Add stock form
   const [form, setForm]         = useState({ product:'', location:'Godown', qty:'', notes:'' })
@@ -114,11 +117,28 @@ export default function Inventory() {
         }
         return next
       })
+      // Row 1 in the sheet is the header, so data row i (0-based) sits at sheet row i+2.
+      setLogEntries(rows.map((row, i) => ({ ...row, rowIndex: i + 2 })).reverse())
+    } else {
+      setLogEntries([])
     }
     setSyncing(false)
     setLastSynced(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }))
     if (!silent) showToast(rows.length > 0 ? `✓ Synced ${rows.length} entries from Google Sheet` : 'No Sheet data found — showing local stock')
   }, [])
+
+  const handleDeleteEntry = async (entry: StockLogEntry) => {
+    if (!confirm(`Delete this stock entry — "${entry.Product}" (${entry.Location}, ${entry.Qty})? This can't be undone.`)) return
+    setDeletingRow(entry.rowIndex)
+    const result = await deleteRow('Stock', entry.rowIndex)
+    setDeletingRow(null)
+    if (result?.status === 'ok') {
+      showToast(`✓ Entry deleted`)
+      syncFromSheet(true)
+    } else {
+      showToast(`✗ Failed to delete: ${result?.error || 'unknown error'}`)
+    }
+  }
 
   useEffect(() => { syncFromSheet(true) }, [syncFromSheet])
 
@@ -311,6 +331,41 @@ export default function Inventory() {
                   })}
                 </tbody>
               </table>
+            </div>
+
+            {/* Recent Stock Entries — movement log, with delete for mistakes */}
+            <div>
+              <p className="text-sm font-semibold mb-2" style={{color:'var(--text-1)'}}>Recent Stock Entries</p>
+              <div className="overflow-x-auto rounded-xl border" style={{borderColor:'var(--border-2)'}}>
+                <table className="tbl w-full">
+                  <thead>
+                    <tr>
+                      <th>Product</th><th>Location</th><th className="text-center">Qty</th>
+                      <th>Notes</th><th>Date</th><th className="text-center">Delete</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {logEntries.length === 0 && (
+                      <tr><td colSpan={6} className="text-center py-6" style={{color:'var(--text-4)'}}>No stock entries yet</td></tr>
+                    )}
+                    {logEntries.slice(0, 20).map(entry => (
+                      <tr key={entry.rowIndex}>
+                        <td className="font-medium" style={{color:'var(--text-1)'}}>{entry.Product}</td>
+                        <td className="text-xs" style={{color:'var(--text-3)'}}>{entry.Location}</td>
+                        <td className="text-center">{entry.Qty}</td>
+                        <td className="text-xs" style={{color:'var(--text-4)'}}>{entry.Notes || '—'}</td>
+                        <td className="text-xs" style={{color:'var(--text-4)'}}>{entry.Date}</td>
+                        <td className="text-center">
+                          <button onClick={() => handleDeleteEntry(entry)} disabled={deletingRow === entry.rowIndex}
+                            className="p-1.5 rounded-lg transition-colors hover:bg-red-50 text-red-500 disabled:opacity-40" title="Delete this entry">
+                            <Trash2 size={13}/>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}

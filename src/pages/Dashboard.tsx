@@ -3,41 +3,19 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 const fmt = (n: number) => '₹' + n.toLocaleString('en-IN')
 
-const revenueData = [
-  { m: 'Aug', revenue: 231228, profit: 109307 },
-  { m: 'Sep', revenue: 605358, profit: 88174  },
-  { m: 'Oct', revenue: 554005, profit: 156310 },
-  { m: 'Nov', revenue: 905714, profit: 279887 },
-]
+const revenueData: { m: string; revenue: number; profit: number }[] = []
 
-const topProjects = [
-  { name: 'SHUBHARAM COMPLEX',     value: 854583, profit: 256013 },
-  { name: 'LAMY STORE',            value: 284960, profit: 95216  },
-  { name: 'G P SPORTS & INFRA',    value: 238714, profit: 17010  },
-  { name: 'STREAMLINE FITNESS',    value: 197017, profit: 39639  },
-  { name: 'ARYAN INTERIORS - TN',  value: 98016,  profit: 57593  },
-]
+const topProjects: { name: string; value: number; profit: number }[] = []
 
-const recentProjects = [
-  { name: 'POWER PLUS ENTERPRISES', date: '07-Nov-23', status: 'Settled',  },
-  { name: 'YUKI PAN ASIAN',         date: '03-Nov-23', status: 'Pending',  },
-  { name: 'PNG HEALTHCARE',         date: '03-Nov-23', status: 'Settled',  },
-  { name: 'PURVA SKYWOOD',          date: '30-Oct-23', status: 'Settled',  },
-  { name: 'SQUIRE HWFS',            date: '19-Oct-23', status: 'Settled',  },
-]
+const recentProjects: { name: string; date: string; status: string }[] = []
 
-const alerts = [
-  { msg: 'YUKI PAN ASIAN — balance pending ₹7,422',    warn: true  },
-  { msg: 'ARYAN INTERIORS balance ₹117 pending',       warn: true  },
-  { msg: '17 projects completed this financial year',  warn: false },
-  { msg: 'Gross profit margin: 28.5%',                 warn: false },
-]
+const alerts: { msg: string; warn: boolean }[] = []
 
 const STATS = [
-  { label: 'Total Revenue',   val: '₹20.74L', sub: '17 projects',    icon: IndianRupee, color: 'text-brand'       },
-  { label: 'Gross Profit',    val: '₹5.92L',  sub: '28.5% margin',   icon: TrendingUp,  color: 'text-green-500'  },
-  { label: 'Total Collected', val: '₹21.50L', sub: 'Incl. advances', icon: Package,     color: 'text-blue-500'   },
-  { label: 'Active Projects', val: '17',       sub: 'FY 2023–24',     icon: Users,       color: 'text-purple-500' },
+  { label: 'Total Revenue',   val: '₹0', sub: '0 projects',    icon: IndianRupee, color: 'text-brand'       },
+  { label: 'Gross Profit',    val: '₹0', sub: '—',             icon: TrendingUp,  color: 'text-green-500'  },
+  { label: 'Total Collected', val: '₹0', sub: 'Incl. advances', icon: Package,     color: 'text-blue-500'   },
+  { label: 'Active Projects', val: '0',  sub: 'FY 2026–27',     icon: Users,       color: 'text-purple-500' },
 ]
 
 const statusBadge: Record<string, string> = { Settled: 'badge-green', Pending: 'badge-yellow', 'In Progress': 'badge-blue' }
@@ -65,8 +43,8 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="card xl:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <div><p className="section-title text-base">Monthly Revenue & Profit</p><p className="section-sub">FY 2023–24</p></div>
-            <span className="badge-gold">FY 2023-24</span>
+            <div><p className="section-title text-base">Monthly Revenue & Profit</p><p className="section-sub">FY 2026–27</p></div>
+            <span className="badge-gold">FY 2026-27</span>
           </div>
           <ResponsiveContainer width="100%" height={210}>
             <AreaChart data={revenueData}>
@@ -92,13 +70,13 @@ export default function Dashboard() {
 
         <div className="card">
           <p className="section-title text-base mb-1">Expense Breakdown</p>
-          <p className="section-sub mb-4">Total FY 2023–24</p>
+          <p className="section-sub mb-4">Total FY 2026–27</p>
           <ResponsiveContainer width="100%" height={210}>
             <BarChart data={[
-              { name: 'Material', v: 971128 },
-              { name: 'Labour',   v: 166960 },
-              { name: 'GST Paid', v: 173414 },
-              { name: 'Misc',     v: 28732  },
+              { name: 'Material', v: 0 },
+              { name: 'Labour',   v: 0 },
+              { name: 'GST Paid', v: 0 },
+              { name: 'Misc',     v: 0 },
             ]} barSize={24}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={false} tickLine={false} />
@@ -116,6 +94,7 @@ export default function Dashboard() {
         <div className="card xl:col-span-2">
           <p className="section-title text-base mb-4">Top Projects by Revenue</p>
           <div className="space-y-3.5">
+            {topProjects.length === 0 && <p className="text-sm text-gray-400 text-center py-6">No projects yet</p>}
             {topProjects.map((p, i) => {
               const pct = Math.round((p.value / topProjects[0].value) * 100)
               return (
@@ -144,6 +123,7 @@ export default function Dashboard() {
           <div className="card">
             <p className="section-title text-sm mb-3">Alerts</p>
             <ul className="space-y-2.5">
+              {alerts.length === 0 && <li className="text-xs text-gray-400 text-center py-2">No alerts</li>}
               {alerts.map((a, i) => (
                 <li key={i} className="flex items-start gap-2 text-xs text-gray-500">
                   {a.warn
@@ -164,6 +144,7 @@ export default function Dashboard() {
               </a>
             </div>
             <div className="space-y-2.5">
+              {recentProjects.length === 0 && <p className="text-xs text-gray-400 text-center py-2">No recent projects</p>}
               {recentProjects.map(p => (
                 <div key={p.name} className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center text-brand text-xs font-bold shrink-0">

@@ -8,19 +8,11 @@ const UNITS = ['Nos', 'Mtr', 'Kg', 'Ltr', 'Set', 'Pair', 'Box', 'Roll']
 const GST_RATES = [0, 5, 12, 18, 28]
 const STATES = ['Tamil Nadu', 'Karnataka', 'Maharashtra', 'Delhi', 'Telangana', 'Kerala', 'Andhra Pradesh', 'Gujarat']
 
-const PRODUCT_CODES: Record<string, { description: string; hsn: string; rate: number; gstPct: number }> = {
-  'AC001': { description: 'Metallic Wall Finish (per litre)',        hsn: '32081090', rate: 850,   gstPct: 18 },
-  'AC002': { description: 'Moroccan Wall Plaster (per kg)',         hsn: '32081090', rate: 1200,  gstPct: 18 },
-  'AC003': { description: 'Decorative Wall Texture (per litre)',    hsn: '32081090', rate: 650,   gstPct: 18 },
-  'AC004': { description: 'Exterior Weatherproof Paint (per litre)',hsn: '32081010', rate: 480,   gstPct: 18 },
-  'AC005': { description: 'Designer Epoxy Flooring (per sqft)',     hsn: '32082090', rate: 180,   gstPct: 18 },
-  'AC006': { description: 'Venetian Plaster (per kg)',              hsn: '32089090', rate: 1500,  gstPct: 18 },
-  'AC007': { description: 'Primer Coat (per litre)',                hsn: '32081010', rate: 220,   gstPct: 18 },
-  'AC008': { description: 'Texture Sand Finish (per bag 25kg)',     hsn: '32089090', rate: 900,   gstPct: 18 },
-}
+// Rate card pending from client — filled in once real product rates are confirmed.
+const PRODUCT_CODES: Record<string, { description: string; hsn: string; rate: number; gstPct: number }> = {}
 
-let nextInvNum = 60
-const getInvNo = () => `AFS/INV/${String(nextInvNum++).padStart(4,'0')}/2025-26`
+let nextInvNum = 1
+const getInvNo = () => `AFS/INV/${String(nextInvNum++).padStart(4,'0')}/2026-27`
 const today = new Date().toISOString().split('T')[0]
 
 function newItem(id: number): Item {
@@ -113,7 +105,7 @@ function InvoiceForm() {
       <div className="card p-0 overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
           <p className="font-semibold text-gray-700 text-sm">Item Details</p>
-          <p className="text-xs text-gray-400">Type product code (AC001–AC008) to auto-fill</p>
+          <p className="text-xs text-gray-400">Enter item details manually</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -241,7 +233,7 @@ function InvoiceForm() {
 
 // ── Challan Form ──────────────────────────────────────────────────────────────
 function ChallanForm() {
-  const [challanNo]        = useState('AFS/CH/0012/2025-26')
+  const [challanNo]        = useState('AFS/CH/0001/2026-27')
   const [challanDate, setChallanDate] = useState(today)
   const [party, setParty]  = useState('')
   const [vehicle, setVehicle] = useState('')
@@ -361,16 +353,7 @@ function ChallanForm() {
 }
 
 // ── Invoice List ──────────────────────────────────────────────────────────────
-const SAVED = [
-  { inv:'AFS/INV/2324/063', party:'SKYLINE CITY TOWER',  date:'07-Sep-23', total:12012,  status:'Paid'    },
-  { inv:'AFS/PI/2324/30',   party:'LAMY STORE',          date:'22-Oct-23', total:284960, status:'Paid'    },
-  { inv:'AFS/INV/2324/069', party:'G P SPORTS & INFRA',  date:'11-Sep-23', total:238714, status:'Pending' },
-  { inv:'AFS/INV/2324/062', party:'STREAMLINE FITNESS',  date:'05-Sep-23', total:197017, status:'Paid'    },
-  { inv:'AFS/INV/2324/093', party:'SHUBHARAM COMPLEX',   date:'13-Nov-23', total:854583, status:'Paid'    },
-  { inv:'AFS/INV/2324/052', party:'MALNAD ARCADE',       date:'04-Aug-23', total:31034,  status:'Paid'    },
-  { inv:'AFS/QTN/2324/057', party:'ARUN EDUFUN',         date:'21-Aug-23', total:27541,  status:'Pending' },
-  { inv:'AFS/INV/2324/086', party:'YUKI PAN ASIAN',      date:'03-Nov-23', total:19234,  status:'Pending' },
-]
+const SAVED: { inv: string; party: string; date: string; total: number; status: string }[] = []
 
 function InvoiceList({ onNew }: { onNew: () => void }) {
   return (
@@ -384,6 +367,9 @@ function InvoiceList({ onNew }: { onNew: () => void }) {
           <table className="tbl w-full">
             <thead><tr><th>Invoice #</th><th>Party</th><th>Date</th><th className="text-right">Amount</th><th>Status</th></tr></thead>
             <tbody>
+              {SAVED.length === 0 && (
+                <tr><td colSpan={5} className="text-center py-10 text-gray-400">No invoices saved yet</td></tr>
+              )}
               {SAVED.map(r => (
                 <tr key={r.inv}>
                   <td className="font-mono text-xs text-brand">{r.inv}</td>

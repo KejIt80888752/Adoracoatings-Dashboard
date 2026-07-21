@@ -1,15 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
-import { Menu, Bell, Search, Sun, Moon, Package, IndianRupee, Users, X } from 'lucide-react'
+import { Menu, Bell, Search, Sun, Moon, Package, X } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useDarkMode } from '@/hooks/useDarkMode'
 
-const NOTIFICATIONS = [
-  { id:1, type:'stock',   icon: Package,     color:'text-orange-500', bg:'bg-orange-50',   title:'Low Stock Alert',         msg:'CERACAP CHIC only 2 Ltrs left in Godown',      time:'Just now',   unread:true  },
-  { id:2, type:'payment', icon: IndianRupee, color:'text-red-500',    bg:'bg-red-50',      title:'Pending Payment',          msg:'YUKI PAN ASIAN — ₹7,422 still pending',         time:'2 hrs ago',  unread:true  },
-  { id:3, type:'stock',   icon: Package,     color:'text-orange-500', bg:'bg-orange-50',   title:'Out of Stock',             msg:'CALYPSO CHIC — 0 units in both locations',      time:'Today',      unread:true  },
-  { id:4, type:'payment', icon: IndianRupee, color:'text-yellow-600', bg:'bg-yellow-50',   title:'Pending Amount',           msg:'ARYAN INTERIORS — ₹117 balance pending',        time:'Yesterday',  unread:false },
-  { id:5, type:'lead',    icon: Users,       color:'text-brand',      bg:'bg-brand-50',    title:'New Lead Synced',          msg:'ENSEMBLE — Meeting Fixed, follow up needed',     time:'2 days ago', unread:false },
-]
+const NOTIFICATIONS: { id: number; type: string; icon: typeof Package; color: string; bg: string; title: string; msg: string; time: string; unread: boolean }[] = []
 
 interface Props { onMenu: () => void; title: string }
 

@@ -1,44 +1,9 @@
 import { useState } from 'react'
 import { Building2, Home, Phone, Mail, MapPin, TrendingUp, CheckCircle2, Clock } from 'lucide-react'
 
-const B2B_CLIENTS = [
-  { id:1,  firm:'KAF ARCHITECTS',                    type:'Architecture Firm',    contact:'080 2244 2734', email:'kembhaviarchitects@gmail.com',    location:'Jayanagar 4th Block', status:'Hot',  stage:'Follow-Up',     projects:0 },
-  { id:2,  firm:'MAZE CONCEPT DESIGN STUDIO',        type:'Architecture Firm',    contact:'9972771679',    email:'studio@mazeconcept.com',          location:'Jayanagar 1st Block', status:'Hot',  stage:'Meeting Done',  projects:1 },
-  { id:3,  firm:'ENSEMBLE',                          type:'Interior Designers',   contact:'097426 55736',  email:'infor@liarchstudio.co',           location:'Jayanagar 4th Block', status:'Hot',  stage:'Meeting Fixed', projects:0 },
-  { id:4,  firm:'PROCESS ARCHITECT',                 type:'Architecture Firm',    contact:'098805 94163',  email:'processarchitects21@gmail.com',   location:'Jayanagar 1st Block', status:'Hot',  stage:'Follow-Up',     projects:0 },
-  { id:5,  firm:'EVOLVE DESIGN & CONSTRUCTION',      type:'Contractor',           contact:'097409 38581',  email:'',                                location:'Jayanagar 3rd Block', status:'Hot',  stage:'Follow-Up',     projects:0 },
-  { id:6,  firm:'WEA DESIGNS PVT LTD',               type:'Interior Designers',   contact:'079960 60000',  email:'sales@weadesign.com',             location:'J.P Nagar 2nd Phase', status:'Warm', stage:'Initial Contact',projects:0},
-  { id:7,  firm:'BLUECAP INTERIORS',                 type:'Interior Designers',   contact:'098452 64192',  email:'interiors@blucap.in',             location:'Shanthala Nagar',     status:'Warm', stage:'Initial Contact',projects:0},
-  { id:8,  firm:'JOIS DESIGN STUDIO',                type:'Interior Designers',   contact:'088613 52759',  email:'ananya@joisdesignhouse.co.in',    location:'Jayanagar 4th Block', status:'Warm', stage:'Meeting Fixed', projects:0 },
-  { id:9,  firm:'GREYSCALE DESIGN STUDIO',           type:'Architecture Firm',    contact:'080 4151 0310', email:'design-consult@greyscale.in',     location:'Jayanagar 4th Block', status:'Warm', stage:'Initial Contact',projects:0},
-  { id:10, firm:'D ZING ARCHITECTS',                 type:'Architecture Firm',    contact:'080 2245 0688', email:'info@dzigns.in',                  location:'Jayanagar 3rd Block', status:'Warm', stage:'Initial Contact',projects:0},
-  { id:11, firm:'SPACIOUS HOME CONSTRUCTION',        type:'Contractor',           contact:'073400 07347',  email:'Support@Spacioushomes.in',        location:'Fazer Town',          status:'Warm', stage:'Initial Contact',projects:0},
-  { id:12, firm:'MANOJ & ASSOCIATES',                type:'Architecture Firm',    contact:'098450 06699',  email:'',                                location:'Jayanagar 3rd Block', status:'Hot',  stage:'Meeting Fixed', projects:0 },
-  { id:13, firm:'HABITART ARCHITECTURE STUDIO',      type:'Architecture Firm',    contact:'099453 50160',  email:'',                                location:'Jayanagar 9th Block', status:'Warm', stage:'Initial Contact',projects:0},
-  { id:14, firm:'ALCHEMY ARCHITECTS',                type:'Architecture Firm',    contact:'099866 08813',  email:'info@alchemy-architects.com',     location:'Jayanagar 1st Block', status:'New',  stage:'Initial Contact',projects:0},
-  { id:15, firm:'MAP ARCHITECTS',                    type:'Architecture Firm',    contact:'070192 75035',  email:'',                                location:'Hebbal',              status:'Warm', stage:'Initial Contact',projects:0},
-  // Converted B2B clients (from FY 23-24)
-  { id:16, firm:'ARYAN INTERIORS',                   type:'Interior Designers',   contact:'',              email:'',                                location:'Bangalore',           status:'Converted', stage:'Project Done', projects:2 },
-  { id:17, firm:'LAMY STORE',                        type:'Commercial Client',    contact:'',              email:'',                                location:'Bangalore',           status:'Converted', stage:'Project Done', projects:1 },
-  { id:18, firm:'G P SPORTS & INFRA',                type:'Contractor',           contact:'',              email:'',                                location:'Bangalore',           status:'Converted', stage:'Project Done', projects:1 },
-  { id:19, firm:'SHUBHARAM COMPLEX',                 type:'Builder / Developer',  contact:'',              email:'',                                location:'Bangalore',           status:'Converted', stage:'Project Done', projects:1 },
-  { id:20, firm:'SRIKURUNJI INFRASTRUCTURE',         type:'Builder / Developer',  contact:'',              email:'',                                location:'Bangalore',           status:'Converted', stage:'Ongoing',      projects:1 },
-]
+const B2B_CLIENTS: { id: number; firm: string; type: string; contact: string; email: string; location: string; status: string; stage: string; projects: number }[] = []
 
-const B2C_CLIENTS = [
-  { id:1,  name:'PURVA SKYWOOD',          type:'Residential Apartment', location:'Bangalore', area:'2,200 sq.ft', finish:'Exterior Premium Coat',        status:'Converted', paid:'₹65,018'  },
-  { id:2,  name:'SRIKAKULAM APARTMENT',   type:'Residential Apartment', location:'Bangalore', area:'2,800 sq.ft', finish:'Exterior Texture + Shield',    status:'Converted', paid:'₹88,713'  },
-  { id:3,  name:'GODREJ GOLD COUNTY',     type:'Residential Villa',     location:'Bangalore', area:'760 sq.ft',   finish:'Sand Texture Exterior',        status:'Converted', paid:'₹21,358'  },
-  { id:4,  name:'SQUIRE HWFS',            type:'Residential',           location:'Bangalore', area:'580 sq.ft',   finish:'Microcement Floor Finish',     status:'Converted', paid:'₹15,316'  },
-  { id:5,  name:'ARUN EDUFUN',            type:'Educational Space',     location:'Bangalore', area:'980 sq.ft',   finish:'Silk Plaster Coating',         status:'Converted', paid:'₹23,000'  },
-  { id:6,  name:'PNG HEALTHCARE',         type:'Healthcare',            location:'Bangalore', area:'650 sq.ft',   finish:'Smooth + Hygienic Coat',       status:'Converted', paid:'₹11,811'  },
-  { id:7,  name:'SKYLINE CITY TOWER',     type:'Residential Apartment', location:'Bangalore', area:'520 sq.ft',   finish:'Decorative Wall Coating',      status:'Converted', paid:'₹12,012'  },
-  { id:8,  name:'STREAMLINE FITNESS',     type:'Commercial Space',      location:'Bangalore', area:'1,800 sq.ft', finish:'Microcement Wall Finish',      status:'Converted', paid:'₹1,97,017'},
-  { id:9,  name:'ANANT CARS AUTO PVT LTD',type:'Commercial Space',     location:'Bangalore', area:'1,400 sq.ft', finish:'Brand Colour + Smooth Coat',   status:'Converted', paid:'₹69,943'  },
-  { id:10, name:'POWER PLUS ENTERPRISES', type:'Commercial Space',      location:'Bangalore', area:'680 sq.ft',   finish:'Custom Texture Wall Coat',     status:'Converted', paid:'₹15,458'  },
-  { id:11, name:'MALNAD ARCADE',          type:'Commercial Space',      location:'Bangalore', area:'1,050 sq.ft', finish:'Decorative Concrete Floor',    status:'Converted', paid:'₹31,034'  },
-  { id:12, name:'YUKI PAN ASIAN',         type:'Restaurant / Hospitality',location:'Bangalore',area:'820 sq.ft', finish:'Rustic Venetian Plaster',      status:'In Progress',paid:'₹11,811' },
-]
+const B2C_CLIENTS: { id: number; name: string; type: string; location: string; area: string; finish: string; status: string; paid: string }[] = []
 
 const sColor: Record<string, string> = {
   Hot: 'badge-red', Warm: 'badge-yellow', New: 'badge-blue',
@@ -194,6 +159,7 @@ export default function Clients() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+              {b2bList.length === 0 && <p className="text-sm text-gray-400 text-center py-6 col-span-full">No B2B clients yet</p>}
               {b2bList.map(c => (
                 <div key={c.id} className="border border-gray-100 rounded-xl p-4 hover:border-brand/30 hover:shadow-sm transition-all">
                   <div className="flex items-start justify-between gap-2 mb-3">
@@ -258,6 +224,9 @@ export default function Clients() {
                   </tr>
                 </thead>
                 <tbody>
+                  {b2cList.length === 0 && (
+                    <tr><td colSpan={8} className="text-center py-10 text-gray-400">No B2C clients yet</td></tr>
+                  )}
                   {b2cList.map(c => (
                     <tr key={c.id}>
                       <td className="text-gray-400 text-center">{c.id}</td>
@@ -287,7 +256,7 @@ export default function Clients() {
                 { label:'Total B2C Clients',  val: B2C_CLIENTS.length },
                 { label:'Converted',           val: b2cConverted },
                 { label:'In Progress',         val: B2C_CLIENTS.filter(c=>c.status==='In Progress').length },
-                { label:'Total Revenue',       val: '₹5.42L' },
+                { label:'Total Revenue',       val: '₹0' },
               ].map(s => (
                 <div key={s.label} className="card text-center">
                   <p className="text-xl font-bold text-brand">{s.val}</p>

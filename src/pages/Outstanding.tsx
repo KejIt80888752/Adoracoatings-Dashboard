@@ -1,24 +1,6 @@
 import { useState } from 'react'
 
-const PROJECTS = [
-  { sl:1,  name:'SKYLINE CITY TOWER',       inv:'AFS/INV/2324/063', total:12012.40,  rcvd:12012,    pending:0.40   },
-  { sl:2,  name:'LAMY STORE',               inv:'AFS/PI/2324/30',   total:284960.56, rcvd:285000,   pending:-39.44 },
-  { sl:3,  name:'G P SPORTS & INFRA',       inv:'AFS/INV/2324/069', total:238714,    rcvd:238038,   pending:676    },
-  { sl:4,  name:'STREAMLINE FITNESS',       inv:'AFS/INV/2324/062', total:197017.52, rcvd:197018,   pending:-0.48  },
-  { sl:5,  name:'SHUBHARAM COMPLEX',        inv:'AFS/INV/2324/093', total:854583.73, rcvd:943273,   pending:-88689 },
-  { sl:6,  name:'MALNAD ARCADE',            inv:'AFS/INV/2324/052', total:31034,     rcvd:31034,    pending:0      },
-  { sl:7,  name:'ARUN EDUFUN',              inv:'AFS/QTN/2324/057', total:27541.20,  rcvd:23000,    pending:340    },
-  { sl:8,  name:'ANANT CARS AUTO PVT LTD', inv:'AFS/INV/2324/054', total:69972.82,  rcvd:69943,    pending:29.82  },
-  { sl:9,  name:'ARYAN INTERIORS',          inv:'AFS/INV/2324/058', total:23541,     rcvd:23424,    pending:117    },
-  { sl:10, name:'ARYAN INTERIORS - TN',     inv:'AFS/INV/2324/057', total:98016.70,  rcvd:97970,    pending:46.70  },
-  { sl:11, name:'GODREJ GOLD COUNTY',       inv:'AFS/INV/2324/065', total:21358,     rcvd:21177,    pending:181    },
-  { sl:12, name:'SRIKAKULAM APARTMENT',     inv:'AFS/PI/2324/27',   total:88713.58,  rcvd:88731,    pending:-17.42 },
-  { sl:13, name:'SQUIRE HWFS',              inv:'AFS/INV/2324/084', total:15316.40,  rcvd:15316,    pending:0.40   },
-  { sl:14, name:'PURVA SKYWOOD',            inv:'AFS/PI/2324/31',   total:65018,     rcvd:65018,    pending:0      },
-  { sl:15, name:'PNG HEALTHCARE',           inv:'AFS/INV/2324/089', total:11811.80,  rcvd:11811.8,  pending:0      },
-  { sl:16, name:'YUKI PAN ASIAN',           inv:'AFS/INV/2324/086', total:19234,     rcvd:11811.8,  pending:0      },
-  { sl:17, name:'POWER PLUS ENTERPRISES',   inv:'AFS/INV/2324/092', total:15458,     rcvd:15458,    pending:0      },
-]
+const PROJECTS: { sl: number; name: string; inv: string; total: number; rcvd: number; pending: number }[] = []
 
 const fmt = (n: number) => '₹' + n.toLocaleString('en-IN')
 
@@ -47,12 +29,12 @@ export default function Outstanding() {
     <div className="p-6 space-y-6">
       <div>
         <h1 className="section-title">Outstanding Payments</h1>
-        <p className="section-sub">Payment settlement status — FY 2023-24</p>
+        <p className="section-sub">Payment settlement status — FY 2026-27</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="card-sm text-center">
-          <div className="text-2xl font-bold text-brand">17</div>
+          <div className="text-2xl font-bold text-brand">{PROJECTS.length}</div>
           <div className="text-xs text-gray-500 mt-1">Total Projects</div>
         </div>
         <div className="card-sm text-center">

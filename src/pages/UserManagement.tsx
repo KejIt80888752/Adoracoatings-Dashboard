@@ -92,7 +92,7 @@ export default function UserManagement() {
       {/* Table */}
       <div className="card">
         <h2 className="font-semibold text-gray-700 mb-4">Team Members</h2>
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[65vh]">
           <table className="tbl w-full">
             <thead>
               <tr><th>User</th><th>Email</th><th>Phone</th><th>Role</th><th>Status</th><th>Last Login</th><th>Actions</th></tr>

@@ -225,22 +225,28 @@ export default function Inventory() {
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label:'Total Products', val: stock.length,  icon: Warehouse,  border:'border-brand'   },
-          { label:'Godown Stock',   val:`${totalGodown.toFixed(0)} kg/L`, icon: Package2, border:'border-blue-500'  },
-          { label:'Sea Air Stock',  val:`${totalSea.toFixed(0)} kg/L`,    icon: Package2, border:'border-purple-500'},
-          { label:'Out of Stock',   val: outOfStock,    icon: AlertCircle,border:'border-red-500'  },
+          { label:'Total Products', val: stock.length,  icon: Warehouse,  border:'border-brand',    addLocation: null },
+          { label:'Godown Stock',   val:`${totalGodown.toFixed(0)} kg/L`, icon: Package2, border:'border-blue-500',   addLocation: 'Godown' },
+          { label:'Sea Air Stock',  val:`${totalSea.toFixed(0)} kg/L`,    icon: Package2, border:'border-purple-500', addLocation: 'Sea Air Logistics' },
+          { label:'Out of Stock',   val: outOfStock,    icon: AlertCircle,border:'border-red-500',   addLocation: null },
         ].map(k => (
-          <div key={k.label} className={`card border-l-4 ${k.border}`}>
+          <div key={k.label} className={`card border-l-4 ${k.border} relative`}>
             <div className="flex items-center gap-3">
               <k.icon size={18} className={k.border.replace('border-','text-')} />
               <div><p className="text-xl font-bold" style={{color:'var(--text-1)'}}>{k.val}</p><p className="text-xs" style={{color:'var(--text-4)'}}>{k.label}</p></div>
+              {k.addLocation && (
+                <button onClick={() => { setForm(f => ({ ...f, location: k.addLocation as string })); setAddModal(true) }}
+                  className="ml-auto p-1.5 rounded-lg transition-colors hover:bg-brand-50 text-brand shrink-0" title={`Add stock to ${k.addLocation}`}>
+                  <Plus size={16}/>
+                </button>
+              )}
             </div>
           </div>
         ))}
       </div>
 
       {/* Tabs */}
-      <div className="card !p-0 overflow-hidden">
+      <div className="card !p-0 overflow-visible">
         <div className="flex border-b overflow-x-auto" style={{borderColor:'var(--border-2)'}}>
           {([
             { id:'stock',      label:'Stock Overview',  icon: Warehouse  },
@@ -285,7 +291,7 @@ export default function Inventory() {
               </button>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border" style={{borderColor:'var(--border-2)'}}>
+            <div className="overflow-auto max-h-[65vh] rounded-xl border" style={{borderColor:'var(--border-2)'}}>
               <table className="tbl w-full">
                 <thead>
                   <tr>
@@ -336,7 +342,7 @@ export default function Inventory() {
             {/* Recent Stock Entries — movement log, with delete for mistakes */}
             <div>
               <p className="text-sm font-semibold mb-2" style={{color:'var(--text-1)'}}>Recent Stock Entries</p>
-              <div className="overflow-x-auto rounded-xl border" style={{borderColor:'var(--border-2)'}}>
+              <div className="overflow-auto max-h-[65vh] rounded-xl border" style={{borderColor:'var(--border-2)'}}>
                 <table className="tbl w-full">
                   <thead>
                     <tr>

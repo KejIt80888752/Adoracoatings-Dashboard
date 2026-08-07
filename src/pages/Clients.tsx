@@ -126,7 +126,7 @@ export default function Clients() {
       </div>
 
       {/* Tabs */}
-      <div className="card !p-0 overflow-hidden">
+      <div className="card !p-0 overflow-visible">
         <div className="flex border-b border-gray-100">
           {([
             { id: 'b2b',     label: 'B2B Clients',    icon: Building2, desc: 'Architects, Designers & Contractors' },
@@ -215,7 +215,7 @@ export default function Clients() {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-auto max-h-[65vh]">
               <table className="w-full tbl">
                 <thead>
                   <tr>
@@ -283,7 +283,7 @@ export default function Clients() {
               ))}
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-auto max-h-[65vh]">
               <table className="w-full tbl">
                 <thead><tr><th>Step</th><th>Action</th><th>Phase</th></tr></thead>
                 <tbody>

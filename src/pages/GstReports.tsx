@@ -63,7 +63,7 @@ export default function GstReports() {
         )}
       </div>
 
-      <div className="card overflow-x-auto">
+      <div className="card overflow-auto max-h-[65vh]">
         <h2 className="font-semibold text-gray-700 mb-4">Project-wise GST Detail</h2>
         <table className="tbl">
           <thead>

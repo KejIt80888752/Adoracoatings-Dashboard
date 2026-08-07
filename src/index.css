@@ -112,7 +112,7 @@
   .section-sub   { @apply text-xs mt-0.5; color: var(--text-4); }
 
   /* Table */
-  .tbl th { @apply text-left text-xs font-semibold px-4 py-3 whitespace-nowrap border-b; color: var(--text-3); background-color: var(--bg-card2); border-color: var(--border-2); }
+  .tbl th { @apply text-left text-xs font-semibold px-4 py-3 whitespace-nowrap border-b sticky top-0 z-10; color: var(--text-3); background-color: var(--bg-card2); border-color: var(--border-2); }
   .tbl td { @apply px-4 py-3 text-sm border-b; color: var(--text-2); border-color: var(--border); }
   .tbl tr:hover td { background-color: rgba(74,124,31,0.04); }
   .dark .tbl tr:hover td { background-color: rgba(74,124,31,0.08); }

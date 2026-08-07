@@ -63,7 +63,7 @@ export default function Outstanding() {
             </button>
           ))}
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[65vh]">
           <table className="tbl">
             <thead>
               <tr>

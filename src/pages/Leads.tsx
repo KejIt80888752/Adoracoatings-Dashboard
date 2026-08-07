@@ -9,33 +9,7 @@ const STAFF = ['Abhishek (Marketing)', 'Muniraj Sir (Supervisor)', 'Anil Sir (Su
 
 type Lead = { ID: string; Name: string; Phone: string; Email: string; Source: string; Status: string; Stage: string; Via: string; 'Date Added': string; Notes?: string }
 
-const LEADS = [
-  { id:1,  name:'KAF ARCHITECTS',                     ph:'080 2244 2734',   email:'kembhaviarchitects@gmail.com',     src:'Cold Call', status:'Hot',  via:'Phone', last:'Jan 2026', stage:'Follow-Up'     },
-  { id:2,  name:'MAZE CONCEPT DESIGN STUDIO',          ph:'9972771679',      email:'studio@mazeconcept.com',           src:'Cold Call', status:'Hot',  via:'Phone', last:'Jan 2026', stage:'Meeting Done'  },
-  { id:3,  name:'MANOJ & ASSOCIATES',                  ph:'098450 06699',    email:'',                                 src:'Cold Call', status:'Hot',  via:'Phone', last:'Jan 2026', stage:'Meeting Fixed' },
-  { id:4,  name:'PROCESS ARCHITECT',                   ph:'098805 94163',    email:'processarchitects21@gmail.com',    src:'Cold Call', status:'Hot',  via:'Phone', last:'Jan 2026', stage:'Follow-Up'     },
-  { id:5,  name:'EVOLVE DESIGN & CONSTRUCTION',        ph:'097409 38581',    email:'',                                 src:'Cold Call', status:'Hot',  via:'Phone', last:'Jan 2026', stage:'Follow-Up'     },
-  { id:6,  name:'ENSEMBLE',                            ph:'097426 55736',    email:'infor@liarchstudio.co',            src:'Cold Call', status:'Hot',  via:'Phone', last:'Feb 2026', stage:'Meeting Fixed' },
-  { id:7,  name:'MAP ARCHITECTS',                      ph:'070192 75035',    email:'',                                 src:'Cold Call', status:'Warm', via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
-  { id:8,  name:'D ZING ARCHITECTS',                   ph:'080 2245 0688',   email:'info@dzigns.in',                   src:'Cold Call', status:'Warm', via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
-  { id:9,  name:'SPACIOUS HOME CONSTRUCTION',          ph:'073400 07347',    email:'Support@Spacioushomes.in',         src:'Cold Call', status:'Warm', via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
-  { id:10, name:'WEA DESIGNS PVT LTD',                 ph:'079960 60000',    email:'sales@weadesign.com',              src:'Cold Call', status:'Warm', via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
-  { id:11, name:'BLUECAP INTERIORS',                   ph:'098452 64192',    email:'interiors@blucap.in',              src:'Cold Call', status:'Warm', via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
-  { id:12, name:'JOIS DESIGN STUDIO',                  ph:'088613 52759',    email:'ananya@joisdesignhouse.co.in',     src:'Cold Call', status:'Warm', via:'Phone', last:'Jan 2026', stage:'Meeting Fixed' },
-  { id:13, name:'ME DESIGN STUDIO',                    ph:'098864 00664',    email:'office@medesignstudio.in',         src:'Cold Call', status:'Warm', via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
-  { id:14, name:'GREYSCALE DESIGN STUDIO',             ph:'080 4151 0310',   email:'design-consult@greyscale.in',      src:'Cold Call', status:'Warm', via:'Phone', last:'Mar 2026', stage:'Initial Contact'},
-  { id:15, name:'LIVING ART ARCHITECT',                ph:'099000 45369',    email:'info@livingincorp.net',            src:'Cold Call', status:'Warm', via:'Phone', last:'Feb 2026', stage:'Initial Contact'},
-  { id:16, name:'ALCHEMY ARCHITECTS',                  ph:'099866 08813',    email:'info@alchemy-architects.com',      src:'Cold Call', status:'New',  via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
-  { id:17, name:'THE PURPLE INK STUDIO',               ph:'088672 65213',    email:'info@thepurpleinkstudio.com',      src:'Cold Call', status:'New',  via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
-  { id:18, name:'NANDISH ARCHITECT',                   ph:'080 2244 4060',   email:'nandisharchitects@gmail.com',      src:'Cold Call', status:'New',  via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
-  { id:19, name:'HABITART ARCHITECTURE STUDIO',        ph:'099453 50160',    email:'',                                 src:'Cold Call', status:'New',  via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
-  { id:20, name:'BRICK & BOLT HOME CONSTRUCTION',      ph:'075052 05205',    email:'info@bricknbolt.com',              src:'Cold Call', status:'New',  via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
-  { id:21, name:'GEOMETRICS ENGINEER ARCHITECTURE',    ph:'080 2663 8195',   email:'info@geometrixs.com',              src:'Cold Call', status:'Warm', via:'Phone', last:'Mar 2026', stage:'Initial Contact'},
-  { id:22, name:'ZENTAGAL ARCHITECT',                  ph:'081059 91912',    email:'info@zentanglearchitects.com',     src:'Cold Call', status:'Warm', via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
-  { id:23, name:'VISHISHTA ARCHITECTS',                ph:'099860 29694',    email:'vishishtaarchitectsblr@gmail.com', src:'Cold Call', status:'New',  via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
-  { id:24, name:'IA STUDIO',                           ph:'080 4970 6649',   email:'work@interfacear.in',              src:'Cold Call', status:'Warm', via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
-  { id:25, name:'CBRC',                                ph:'090036 18778',    email:'',                                 src:'Cold Call', status:'Warm', via:'Phone', last:'Jan 2026', stage:'Initial Contact'},
-]
+const LEADS: { id: number; name: string; ph: string; email: string; src: string; status: string; via: string; last: string; stage: string }[] = []
 
 function mapLead(l: Lead, i: number) {
   // Row 1 in the sheet is the header, so data row i (0-based) sits at sheet row i+2.
@@ -201,10 +175,10 @@ export default function Leads() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label:'Total Leads',      val: LEADS.length,                                      accent:'border-brand'      },
-          { label:'Instagram Leads',  val: LEADS.filter(l=>l.src==='Instagram').length,        accent:'border-purple-500' },
-          { label:'Hot Leads',        val: LEADS.filter(l=>l.status==='Hot').length,           accent:'border-red-500'    },
-          { label:'Conversions',      val: 14,                                                  accent:'border-green-500'  },
+          { label:'Total Leads',      val: LEADS_DATA.length,                                      accent:'border-brand'      },
+          { label:'Instagram Leads',  val: LEADS_DATA.filter(l=>l.src==='Instagram').length,        accent:'border-purple-500' },
+          { label:'Hot Leads',        val: LEADS_DATA.filter(l=>l.status==='Hot').length,           accent:'border-red-500'    },
+          { label:'Conversions',      val: LEADS_DATA.filter(l=>l.status==='Converted').length,     accent:'border-green-500'  },
         ].map(c => (
           <div key={c.label} className={`card border-l-4 ${c.accent}`}>
             <p className="text-2xl font-bold text-gray-800">{c.val}</p>
@@ -214,7 +188,7 @@ export default function Leads() {
       </div>
 
       {/* Tabs */}
-      <div className="card !p-0 overflow-hidden">
+      <div className="card !p-0 overflow-visible">
         <div className="flex border-b border-gray-100">
           {([
             { id:'leads',     label:'All Leads',           icon: User         },
@@ -257,7 +231,7 @@ export default function Leads() {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-auto max-h-[65vh]">
               <table className="w-full tbl">
                 <thead><tr>{['Name','Phone','Email','Source','Stage','Status','Via','Last Contact','Actions'].map(h=><th key={h}>{h}</th>)}</tr></thead>
                 <tbody>
@@ -332,7 +306,7 @@ export default function Leads() {
             </div>
 
             {/* Recent Posts — real data pulled from Instagram */}
-            <div className="overflow-x-auto card p-0">
+            <div className="overflow-auto max-h-[65vh] card p-0">
               <table className="tbl w-full">
                 <thead><tr><th>Caption</th><th>Type</th><th>Likes</th><th>Comments</th><th>Posted</th><th>Link</th></tr></thead>
                 <tbody>

@@ -107,7 +107,7 @@ function InvoiceForm() {
           <p className="font-semibold text-gray-700 text-sm">Item Details</p>
           <p className="text-xs text-gray-400">Enter item details manually</p>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[65vh]">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
@@ -275,7 +275,7 @@ function ChallanForm() {
           <p className="font-semibold text-gray-700 text-sm">Goods Dispatched</p>
           <p className="text-xs text-gray-400">Delivery Challan</p>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[65vh]">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
@@ -363,7 +363,7 @@ function InvoiceList({ onNew }: { onNew: () => void }) {
         <button onClick={onNew} className="btn-gold flex items-center gap-1.5 text-sm"><Plus size={13} /> New Tax Invoice</button>
       </div>
       <div className="card p-0 overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[65vh]">
           <table className="tbl w-full">
             <thead><tr><th>Invoice #</th><th>Party</th><th>Date</th><th className="text-right">Amount</th><th>Status</th></tr></thead>
             <tbody>

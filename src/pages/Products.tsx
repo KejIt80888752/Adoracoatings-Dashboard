@@ -179,7 +179,7 @@ export default function Products() {
 
       {/* Table */}
       <div className="card p-0 overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[65vh]">
           <table className="tbl w-full">
             <thead>
               <tr>

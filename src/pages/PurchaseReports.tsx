@@ -52,7 +52,7 @@ export default function PurchaseReports() {
         </div>
       </div>
 
-      <div className="card overflow-x-auto">
+      <div className="card overflow-auto max-h-[65vh]">
         <h2 className="font-semibold text-gray-700 mb-4">All Projects — Expense Detail</h2>
         <table className="tbl">
           <thead>

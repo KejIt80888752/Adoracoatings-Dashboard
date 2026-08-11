@@ -1,11 +1,56 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, CheckCheck, FileText, List } from 'lucide-react'
+import { Plus, Trash2, CheckCheck, FileText, List, FileSignature } from 'lucide-react'
 import { fetchSheet, addRow, deleteRow } from '../lib/api'
 
 const fmt = (n: number) => '₹' + n.toLocaleString('en-IN')
 
 type Item = { id: number; particulars: string; texture: string; length: number; height: number; nos: number; coefficient: number; rate: number }
 type QuoteRow = { 'Quote No': string; Date: string; 'Client Name': string; 'Client Address': string; 'Handled By': string; 'Enquired By': string; Items: string; Total: string; GST: string; 'Grand Total': string; Status: string }
+
+// ── Standard terms, pulled from Adora Coatings' quotation formats ─────────────
+const BANK_DETAILS = 'Name: Adora Coatings\nBank: Union Bank\nAccount Number: 070525090000001\nIFSC Code: UBIN0907057\nBranch: Whitefield\nGST NO: 29AHDPA4964B1ZN'
+const COMPANY_ADDRESS = 'Adora Coatings\n175/1, Pavilion Rd\nJaya Nagar 1st Block\nByrasandra, Jayanagar\nBengaluru, Karnataka 560011'
+const PAYMENT_TERMS = '70% along with work order towards material cost\n20% towards running bill basis.\nBalance 10% on completion of work.'
+
+const COMMERCIAL_TERMS = [
+  'The terms and conditions in this document take precedence over any other documents, such as your Purchase Order or Work Order.',
+  'The estimate is based on the provided measurements. The final billing will be determined by the actual area covered.',
+  'Work in different areas will be carried out simultaneously in a single phase.',
+  'Processing the advance payment implies your agreement to the terms and conditions outlined in this document. Once processed, the advance is non-refundable under any circumstances.',
+  'Upon project completion, the remaining balance must be paid within 3 days. No retention is allowed, and a 2% Monthly interest will be charged on late payments.',
+  'The price includes both materials and labor.',
+  'Surfaces less than 1 foot in width will be considered as 1 foot.',
+  'Idle Charges: Any delay due to lack of working clearance from the client will result in man-day losses. Consequently, idle charges will be Rs 1500/- per person per day, in addition to the quoted price, and will be charged to your account.',
+]
+
+const EXECUTION_TERMS = [
+  'The site should be free of all the work from other vendors like plumbing, carpentry, electricals, other paint/texture agencies. Jobs like polishing marble, wood floor installation, painting ceilings need to be completed before the commencement of our texture as all these have a very detrimental effect on our product.',
+  'The site should be free from all the debris/loose dust.',
+  'Uninterrupted power supply, ample light to be provided at the application area. Clean water to be provided at the application area.',
+  'The finish is proposed on the smooth surface, any groove, moulding, beading, design element, etc. shall be charged extra according to the complexity of the job.',
+  'Rework or touch up will be charged additionally.',
+  'The finish finalised is hand crafted, the final finish at site may vary slightly from the sample finish.',
+  'Any finish applied on wood, MDF, plywood, etc. panels has a high risk of joint cracking. You will have to either make grooves or apply reinforcement tapes and fill the joints with high quality adhesives. In any case we do not warrant the cracks. Any re-work arising due to cracks will be charged accordingly.',
+  'Clearance of debris from the site will be handled completely by the client.',
+  'Client shall provide a secured area at the site to store our material and equipment.',
+  'We, Adora Coatings, shall be allowed to take pictures / videos of the project for our records. In case you need the credentials to be confidential, indicate the same so that it shall not be.',
+  'Final billing shall be based on the actual quantities applied at site. The proposal does not form any contract or binding for the final amount. The final billing shall be based on measurable BOQs including variation of quantities either minor or major in nature.',
+]
+
+const IMPORTANT_TERMS = [
+  'Manually created colour shades vary around 25% from the chosen colour due to factors like compression and distribution of pigments. It is considered normal and should not be treated as an application defect.',
+  'Our products are applied by hand so uniform application like paint is not possible, nor would we try to mimic paint. Variation in texture is natural and should not be treated as an application defect.',
+  'Lime Plaster is a thick material, hence it is not possible to apply it inside grooves and small areas. The client will have to get it painted after our work is completed. We can do regular acrylic painting inside the grooves for a running-feet charge. Rate will be the same as the sq.ft. rate of the finish selected. Groove colour may not match and will slightly differ.',
+  'We would not take any accountability for any marks or damages caused to the applied or painted wall by any other reason or individual beyond our scope.',
+  'Existing surface undulations, if any, may appear even after the finish is applied.',
+  'The work will commence after the Terms and Conditions have been approved and signed by the Authorised Signatory.',
+]
+
+const MEASUREMENT_TERMS = [
+  'Joint Measurements: 100% joint measurements to be completed during the course of the work.',
+  'Third Party Measurements: A professional agency will do the measurement in the presence of Adora Coatings & the Client. The Client will pay 100% agency charges.',
+  'Any Other Method: If there is any other method, the Client shall provide details before the commencement of the work. Additional charges will be applicable.',
+]
 
 let nextQuoteNum = 1
 const getQuoteNo = () => `ACQ-${String(nextQuoteNum++).padStart(3,'0')}/26-27`
@@ -25,6 +70,7 @@ export default function Quotation() {
   const [loading, setLoading] = useState(false)
   const [toast, setToast]   = useState('')
   const [deletingRow, setDeletingRow] = useState<number | null>(null)
+  const [workOrderQuote, setWorkOrderQuote] = useState<(QuoteRow & { rowIndex: number }) | null>(null)
 
   const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(''), 3000) }
 
@@ -114,15 +160,15 @@ export default function Quotation() {
                 <thead>
                   <tr>
                     <th>Quotation #</th><th>Client</th><th>Date</th>
-                    <th>Total</th><th>GST (18%)</th><th>Grand Total</th><th>Status</th><th>Delete</th>
+                    <th>Total</th><th>GST (18%)</th><th>Grand Total</th><th>Status</th><th>Work Order</th><th>Delete</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading && (
-                    <tr><td colSpan={8} className="text-center py-10 text-gray-400">Loading…</td></tr>
+                    <tr><td colSpan={9} className="text-center py-10 text-gray-400">Loading…</td></tr>
                   )}
                   {!loading && filtered.length === 0 && (
-                    <tr><td colSpan={8} className="text-center py-10 text-gray-400">{search ? 'No quotations match your search.' : 'No quotations yet.'}</td></tr>
+                    <tr><td colSpan={9} className="text-center py-10 text-gray-400">{search ? 'No quotations match your search.' : 'No quotations yet.'}</td></tr>
                   )}
                   {filtered.map(q => (
                     <tr key={q.rowIndex}>
@@ -133,6 +179,12 @@ export default function Quotation() {
                       <td className="text-gray-500">{fmt(Number(q.GST) || 0)}</td>
                       <td className="font-semibold text-brand">{fmt(Number(q['Grand Total']) || 0)}</td>
                       <td><span className={q.Status === 'Completed' ? 'badge-green' : q.Status === 'Pending' ? 'badge-red' : 'badge-yellow'}>{q.Status || 'In Progress'}</span></td>
+                      <td>
+                        <button onClick={() => setWorkOrderQuote(q)}
+                          className="p-1.5 rounded-lg transition-colors hover:bg-brand-50 text-brand" title="View / Print Work Order">
+                          <FileSignature size={13}/>
+                        </button>
+                      </td>
                       <td>
                         <button onClick={() => handleDelete(q)} disabled={deletingRow === q.rowIndex}
                           className="p-1.5 rounded-lg transition-colors hover:bg-red-50 text-red-500 disabled:opacity-40" title="Delete quotation">
@@ -150,11 +202,120 @@ export default function Quotation() {
 
       {tab === 'create' && <CreateQuotation onSaved={() => { setTab('list'); loadQuotes() }} showToast={showToast} />}
 
+      {workOrderQuote && <WorkOrderModal quote={workOrderQuote} onClose={() => setWorkOrderQuote(null)} />}
+
       {toast && (
         <div className="fixed top-4 right-4 z-[9999] bg-brand text-white text-sm px-4 py-3 rounded-xl shadow-lg flex items-center gap-2">
           <CheckCheck size={15}/>{toast}
         </div>
       )}
+    </div>
+  )
+}
+
+function WorkOrderModal({ quote: q, onClose }: { quote: QuoteRow & { rowIndex: number }; onClose: () => void }) {
+  let items: (Item & { area?: number; amount?: number })[] = []
+  try { items = JSON.parse(q.Items || '[]') } catch { items = [] }
+
+  const Section = ({ title, terms }: { title: string; terms: string[] }) => (
+    <div className="mb-5">
+      <h3 className="text-sm font-bold text-brand border-b-2 border-brand pb-1 mb-2">{title}</h3>
+      <ol className="space-y-1.5 text-xs text-gray-700">
+        {terms.map((t, i) => <li key={i}><b>{i + 1}.</b> {t}</li>)}
+      </ol>
+    </div>
+  )
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto print:bg-white print:p-0 print:block">
+      <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl my-8 print:shadow-none print:rounded-none print:my-0 print:max-w-none" id="work-order-print-area">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 print:hidden">
+          <h2 className="font-semibold text-gray-800">Work Order — {q['Quote No']}</h2>
+          <div className="flex gap-2">
+            <button onClick={() => window.print()} className="btn-gold text-sm">Print</button>
+            <button onClick={onClose} className="btn-outline-gold text-sm">Close</button>
+          </div>
+        </div>
+
+        <div className="p-8 text-sm text-gray-800">
+          <h1 className="text-xl font-bold text-brand">Adora Coatings</h1>
+          <p className="text-xs text-gray-500 mb-4">GST NO: 29AHDPA4964B1ZN &nbsp;|&nbsp; 175/1, Pavilion Rd, Jaya Nagar 1st Block, Bengaluru 560011</p>
+
+          <div className="grid grid-cols-2 gap-4 mb-4 text-xs">
+            <div>
+              <p><b>Quotation No:</b> {q['Quote No']}</p>
+              <p><b>Date:</b> {q.Date}</p>
+              <p><b>Handled By:</b> {q['Handled By'] || '—'}</p>
+              <p><b>Enquired By / Reference:</b> {q['Enquired By'] || '—'}</p>
+            </div>
+            <div>
+              <p><b>Client Name:</b> {q['Client Name']}</p>
+              <p><b>Address:</b> {q['Client Address'] || '—'}</p>
+            </div>
+          </div>
+
+          <h3 className="text-sm font-bold text-brand border-b-2 border-brand pb-1 mb-2">Item Details</h3>
+          <table className="w-full text-xs mb-2 border-collapse">
+            <thead>
+              <tr className="bg-gray-50">
+                {['SL','Particulars','Texture','Length','Height','Nos','Co-eff','Area (SFT)','Rate','Amount'].map(h => (
+                  <th key={h} className="border border-gray-200 px-2 py-1.5 text-left">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((it, i) => (
+                <tr key={i}>
+                  <td className="border border-gray-200 px-2 py-1.5">{i + 1}</td>
+                  <td className="border border-gray-200 px-2 py-1.5">{it.particulars}</td>
+                  <td className="border border-gray-200 px-2 py-1.5">{it.texture}</td>
+                  <td className="border border-gray-200 px-2 py-1.5 text-right">{it.length || 0}</td>
+                  <td className="border border-gray-200 px-2 py-1.5 text-right">{it.height || 0}</td>
+                  <td className="border border-gray-200 px-2 py-1.5 text-right">{it.nos || 0}</td>
+                  <td className="border border-gray-200 px-2 py-1.5 text-right">{it.coefficient || 0}</td>
+                  <td className="border border-gray-200 px-2 py-1.5 text-right">{(it.area ?? area(it)).toLocaleString('en-IN')}</td>
+                  <td className="border border-gray-200 px-2 py-1.5 text-right">{(it.rate || 0).toLocaleString('en-IN')}</td>
+                  <td className="border border-gray-200 px-2 py-1.5 text-right">{fmt(it.amount ?? amount(it))}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="w-64 ml-auto space-y-1 text-xs mb-4">
+            <div className="flex justify-between"><span>Total</span><span>{fmt(Number(q.Total) || 0)}</span></div>
+            <div className="flex justify-between"><span>GST Additional @ 18%</span><span>{fmt(Number(q.GST) || 0)}</span></div>
+            <div className="flex justify-between font-bold text-brand text-sm border-t-2 border-brand pt-1"><span>Grand Total</span><span>{fmt(Number(q['Grand Total']) || 0)}</span></div>
+          </div>
+
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs mb-4">
+            <b>PLEASE NOTE:</b> The validity of this quotation is 4 days. Rates will vary as per the colour shade — exact rates shall be quoted once the colours are decided.
+          </div>
+
+          <div className="grid grid-cols-3 gap-4 text-xs mb-6 whitespace-pre-line">
+            <div><b>BANK DETAILS:</b><br/>{BANK_DETAILS}</div>
+            <div><b>ADDRESS:</b><br/>{COMPANY_ADDRESS}</div>
+            <div><b>PAYMENT TERMS:</b><br/>{PAYMENT_TERMS}</div>
+          </div>
+
+          <Section title="Commercial Terms" terms={COMMERCIAL_TERMS} />
+          <Section title="Execution & Logistic Terms & Conditions" terms={EXECUTION_TERMS} />
+          <Section title="Important Terms & Conditions" terms={IMPORTANT_TERMS} />
+          <Section title="Measurements — Terms & Condition" terms={MEASUREMENT_TERMS} />
+
+          <h3 className="text-sm font-bold text-brand border-b-2 border-brand pb-1 mb-2">Work Order</h3>
+          <div className="text-xs space-y-2 mb-10">
+            <p><b>From:</b> Adora Coatings, 175/1, Pavilion Road, Jayanagar 1st Block, Bangalore-560011</p>
+            <p><b>Dear {q['Client Name']},</b></p>
+            <p>We hereby appoint Adora Coatings for the services detailed in the item table above, as per Quotation No. {q['Quote No']} dated {q.Date}, for a total value of {fmt(Number(q['Grand Total']) || 0)} (inclusive of GST).</p>
+            <p>This letter of appointment, together with the conditions of contract stated above, shall govern the agreement.</p>
+            <p>Thanking you,<br/>Yours sincerely,</p>
+          </div>
+
+          <div className="flex justify-between gap-8 text-xs">
+            <div className="flex-1 border-t border-gray-400 pt-2 text-center">Signature: ADORA COATINGS<br/><br/>Date: _______________</div>
+            <div className="flex-1 border-t border-gray-400 pt-2 text-center">Signature: CLIENT / CUSTOMER<br/><br/>Date: _______________</div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

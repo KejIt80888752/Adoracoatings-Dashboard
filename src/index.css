@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Print: only the Work Order document, none of the app chrome ────── */
+@media print {
+  body * { visibility: hidden; }
+  #work-order-print-area, #work-order-print-area * { visibility: visible; }
+  #work-order-print-area { position: absolute; top: 0; left: 0; width: 100%; margin: 0; box-shadow: none; }
+}
+
 /* ── Light / Dark CSS Variables ─────────────────────────────── */
 :root {
   --bg-main:    #f9fafb;

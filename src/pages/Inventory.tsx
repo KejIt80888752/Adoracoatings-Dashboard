@@ -87,6 +87,19 @@ const INITIAL_STOCK: StockItem[] = [
   { sl:71, name:'TUFIT', unit:'Kg', packSize:'20 Kg', godownQty:0, godownKg:0, seaAirQty:0, seaAirKg:0, dispatch:0, productReturn:0 },
   { sl:72, name:'VENETIAN', unit:'Kg', packSize:'20 Kg', godownQty:2, godownKg:40, seaAirQty:8, seaAirKg:160, dispatch:0, productReturn:0 },
   { sl:73, name:'VENETIAN BIANCO', unit:'Ltr', packSize:'1 Ltr', godownQty:2, godownKg:2, seaAirQty:0, seaAirKg:0, dispatch:0, productReturn:0 },
+  // Consumables & site materials brought for godown work on 06.08.2026
+  { sl:74, name:'MASKING TAPE 1 INCH', unit:'Roll', packSize:'1 Inch', godownQty:2, godownKg:2, seaAirQty:0, seaAirKg:0, dispatch:0, productReturn:0 },
+  { sl:75, name:'SAND PAPER 150', unit:'Sheet', packSize:'150 Grit', godownQty:24, godownKg:24, seaAirQty:0, seaAirKg:0, dispatch:0, productReturn:0 },
+  { sl:76, name:'POLISHING CLOTH BIG', unit:'Nos', packSize:'Big', godownQty:2, godownKg:2, seaAirQty:0, seaAirKg:0, dispatch:0, productReturn:0 },
+  { sl:77, name:'ROLLER 6 INCH REFILL', unit:'Nos', packSize:'6 Inch', godownQty:8, godownKg:8, seaAirQty:0, seaAirKg:0, dispatch:0, productReturn:0 },
+  { sl:78, name:'BRUSH 4 INCH', unit:'Nos', packSize:'4 Inch', godownQty:2, godownKg:2, seaAirQty:0, seaAirKg:0, dispatch:0, productReturn:0 },
+  { sl:79, name:'BRUSH 3 INCH', unit:'Nos', packSize:'3 Inch', godownQty:2, godownKg:2, seaAirQty:0, seaAirKg:0, dispatch:0, productReturn:0 },
+  { sl:80, name:'BRUSH 2 INCH', unit:'Nos', packSize:'2 Inch', godownQty:2, godownKg:2, seaAirQty:0, seaAirKg:0, dispatch:0, productReturn:0 },
+  { sl:81, name:'PLASTER OF PARIS', unit:'Kg', packSize:'1 Kg', godownQty:3, godownKg:3, seaAirQty:0, seaAirKg:0, dispatch:0, productReturn:0 },
+  { sl:82, name:'SUPWHITE SMARTCARE ADVANCED CRACKSEAL', unit:'Nos', packSize:'900 gms', godownQty:2, godownKg:2, seaAirQty:0, seaAirKg:0, dispatch:0, productReturn:0 },
+  { sl:83, name:'AP TRUCARE ACRYLIC WALL PUTTY (WHITE)', unit:'Kg', packSize:'5 Kg', godownQty:1, godownKg:5, seaAirQty:0, seaAirKg:0, dispatch:0, productReturn:0 },
+  { sl:84, name:'PREMIUM SATIN EMULSION SG1', unit:'Ltr', packSize:'20 Ltr', godownQty:2, godownKg:40, seaAirQty:0, seaAirKg:0, dispatch:0, productReturn:0 },
+  { sl:85, name:'BIRLA WALL CARE', unit:'Kg', packSize:'30 Kg', godownQty:1, godownKg:30, seaAirQty:0, seaAirKg:0, dispatch:0, productReturn:0 },
 ]
 
 type Tab = 'stock' | 'addProduct' | 'dispatch' | 'return'

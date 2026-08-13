@@ -5,7 +5,56 @@ import { fetchSheet, addRow, deleteRow } from '../lib/api'
 const fmt = (n: number) => '₹' + n.toLocaleString('en-IN')
 
 type Item = { id: number; particulars: string; texture: string; length: number; height: number; nos: number; coefficient: number; rate: number }
-type QuoteRow = { 'Quote No': string; Date: string; 'Client Name': string; 'Client Address': string; 'Handled By': string; 'Enquired By': string; Items: string; Total: string; GST: string; 'Grand Total': string; Status: string }
+type QuoteRow = { 'Quote No': string; Date: string; 'Client Name': string; 'Client Address': string; 'Handled By': string; 'Enquired By': string; 'Finish Type': string; Items: string; Total: string; GST: string; 'Grand Total': string; Status: string }
+
+const FINISH_TYPES = ['Standard', 'MICROLITE'] as const
+type FinishType = typeof FINISH_TYPES[number]
+
+// ── MICROLITE-specific terms (from QUOTATION FORMAT FOR MICROLITE.xlsx) ───────
+const MICROLITE_PREPARATION_INTRO = 'Once this proposal is accepted, our team manager will schedule a site visit to inspect the location, provide design suggestions, measure the space, and, if required, provide your staff with the appropriate training for the initial surface preparation. On the day of the visit, the client, the architect, and any contractors (if any) should be present.'
+
+const MICROLITE_SITE_TERMS = [
+  'The walls should be properly completed, including electrical, painting, and all other agencies’ work.',
+  'It is recommended to have a smooth tile base with paper joint, duly laid with proper slope in the required direction.',
+]
+
+const MICROLITE_CLIENT_TERMS = [
+  'Provision for space to unload materials at the location.',
+  'Provision for water and electricity.',
+  'Provision for proper light.',
+  'The client must take up disposal of waste and debris.',
+  'Arrangement for floor protection must be provided (if required).',
+]
+
+const MICROLITE_SHADE_TERMS = [
+  'There could be minor differences in shade across batches of the material. Nonetheless, we ensure that a single production batch for a certain order has an even shade at the time of production.',
+  'Likewise, there may be minute differences in tone and texture between our reference image or material samples and the finished product.',
+  'Due to the handmade nature of the work, variations in texture and shade are expected. This should be regarded as an aspect of the material’s inherent beauty.',
+]
+
+const MICROLITE_PROTECTION_TERMS = [
+  'When used outside, shielding from surface runoff is necessary.',
+  'Plaster’s sharp edges are prone to chipping, particularly in areas used for circulation. Steps need to be taken in design to prevent this problem.',
+  'The final surface finish cannot be touched up in case of any damages. It is therefore advised to apply the flooring after completing all other tasks.',
+]
+
+const MICROLITE_WORKFLOW_TERMS = [
+  'Any complaints, issues, or suggestions for improvements should be directed via the project manager.',
+  'Disruption to our workflow due to other ongoing activities on the site will result in finishing issues, and might lead to pausing the job and a delay in completion.',
+  'Before the teams depart the site, premises should be inspected for cleanliness, etc. and concerns should be reported to the site manager.',
+  'Work in different areas will be carried out simultaneously in a single phase.',
+]
+
+const MICROLITE_COMMERCIAL_TERMS = [
+  'The final billing will be determined by the actual area covered.',
+  'Upon project completion, the remaining balance must be paid within 3 days. No retention is allowed, and a 2% Monthly interest will be charged on late payments.',
+  'The validity of the quote is for 40 days.',
+  'The price includes both materials and labor.',
+  'Surfaces less than 1 foot in width will be considered as 1 foot.',
+  'Idle Charges: Any delay due to lack of working clearance from the client will result in man-day losses. Consequently, idle charges will be Rs 1500/- per person per day, in addition to the quoted price, and will be charged to your account.',
+  'All rates are Ex-Bangalore.',
+  'Customized samples will be charged additionally. Sampling directly on the wall/surface, whether interior or exterior, is not possible because the product needs to be chiselled out for final application. If unsatisfactory, surface preparation will need to be redone by the client.',
+]
 
 // ── Standard terms, pulled from Adora Coatings' quotation formats ─────────────
 const BANK_DETAILS = 'Name: Adora Coatings\nBank: Union Bank\nAccount Number: 070525090000001\nIFSC Code: UBIN0907057\nBranch: Whitefield\nGST NO: 29AHDPA4964B1ZN'
@@ -216,6 +265,7 @@ export default function Quotation() {
 function WorkOrderModal({ quote: q, onClose }: { quote: QuoteRow & { rowIndex: number }; onClose: () => void }) {
   let items: (Item & { area?: number; amount?: number })[] = []
   try { items = JSON.parse(q.Items || '[]') } catch { items = [] }
+  const isMicrolite = q['Finish Type'] === 'MICROLITE'
 
   const Section = ({ title, terms }: { title: string; terms: string[] }) => (
     <div className="mb-5">
@@ -296,17 +346,41 @@ function WorkOrderModal({ quote: q, onClose }: { quote: QuoteRow & { rowIndex: n
             <div><b>PAYMENT TERMS:</b><br/>{PAYMENT_TERMS}</div>
           </div>
 
-          <Section title="Commercial Terms" terms={COMMERCIAL_TERMS} />
-          <Section title="Execution & Logistic Terms & Conditions" terms={EXECUTION_TERMS} />
-          <Section title="Important Terms & Conditions" terms={IMPORTANT_TERMS} />
-          <Section title="Measurements — Terms & Condition" terms={MEASUREMENT_TERMS} />
+          {isMicrolite ? (
+            <>
+              <p className="text-xs text-gray-700 mb-4">{MICROLITE_PREPARATION_INTRO}</p>
+              <h3 className="text-sm font-bold text-brand border-b-2 border-brand pb-1 mb-2">Preparation</h3>
+              <Section title="1. Site Condition & Preparation" terms={MICROLITE_SITE_TERMS} />
+              <Section title="2. Client Responsibilities" terms={MICROLITE_CLIENT_TERMS} />
+              <h3 className="text-sm font-bold text-brand border-b-2 border-brand pb-1 mb-2">A few things to know before you take the leap…</h3>
+              <Section title="1. Material Shades & Nuances" terms={MICROLITE_SHADE_TERMS} />
+              <Section title="2. Protection & Precaution" terms={MICROLITE_PROTECTION_TERMS} />
+              <Section title="3. Workflow" terms={MICROLITE_WORKFLOW_TERMS} />
+              <Section title="4. Commercials" terms={MICROLITE_COMMERCIAL_TERMS} />
+            </>
+          ) : (
+            <>
+              <Section title="Commercial Terms" terms={COMMERCIAL_TERMS} />
+              <Section title="Execution & Logistic Terms & Conditions" terms={EXECUTION_TERMS} />
+              <Section title="Important Terms & Conditions" terms={IMPORTANT_TERMS} />
+              <Section title="Measurements — Terms & Condition" terms={MEASUREMENT_TERMS} />
+            </>
+          )}
 
           <h3 className="text-sm font-bold text-brand border-b-2 border-brand pb-1 mb-2">Work Order</h3>
           <div className="text-xs space-y-2 mb-10">
-            <p><b>From:</b> Adora Coatings, 175/1, Pavilion Road, Jayanagar 1st Block, Bangalore-560011</p>
+            <p><b>From:</b> Adora Coatings, 171/1 Pavilion Road, Jayanagar 1st Block, Bangalore-560011</p>
             <p><b>Dear {q['Client Name']},</b></p>
-            <p>We hereby appoint Adora Coatings for the services detailed in the item table above, as per Quotation No. {q['Quote No']} dated {q.Date}, for a total value of {fmt(Number(q['Grand Total']) || 0)} (inclusive of GST).</p>
-            <p>This letter of appointment, together with the conditions of contract stated above, shall govern the agreement.</p>
+            {isMicrolite ? (
+              <>
+                <p>We hereby appoint your company for MICROLITE Services as detailed below:</p>
+                <p><b>Project Name:</b> {q['Client Name']}<br/><b>Project Address:</b> {q['Client Address'] || '—'}</p>
+                <p><b>Services:</b> Ref Item Details table above &nbsp; <b>Fees:</b> {fmt(Number(q['Grand Total']) || 0)} (inclusive of GST), as per Quotation No. {q['Quote No']} dated {q.Date}.</p>
+                <p>This letter of appointment together with the conditions of contract as stated above, shall govern the agreement.</p>
+              </>
+            ) : (
+              <p>We hereby appoint Adora Coatings for the services detailed in the item table above, as per Quotation No. {q['Quote No']} dated {q.Date}, for a total value of {fmt(Number(q['Grand Total']) || 0)} (inclusive of GST).</p>
+            )}
             <p>Thanking you,<br/>Yours sincerely,</p>
           </div>
 
@@ -327,6 +401,7 @@ function CreateQuotation({ onSaved, showToast }: { onSaved: () => void; showToas
   const [clientAddr, setClientAddr] = useState('Bangalore')
   const [handledBy, setHandledBy]   = useState('')
   const [enquiredBy, setEnquiredBy] = useState('')
+  const [finishType, setFinishType] = useState<FinishType>('Standard')
   const [items, setItems]   = useState<Item[]>([newItem(1)])
   const [nextId, setNextId] = useState(2)
   const [saving, setSaving] = useState(false)
@@ -351,6 +426,7 @@ function CreateQuotation({ onSaved, showToast }: { onSaved: () => void; showToas
       'Client Address': clientAddr,
       'Handled By': handledBy,
       'Enquired By': enquiredBy,
+      'Finish Type': finishType,
       Items: JSON.stringify(items.map(i => ({ ...i, area: area(i), amount: amount(i) }))),
       Total: total.toFixed(2),
       GST: gst.toFixed(2),
@@ -382,6 +458,18 @@ function CreateQuotation({ onSaved, showToast }: { onSaved: () => void; showToas
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Enquired By / Reference</label>
             <input value={enquiredBy} onChange={e => setEnquiredBy(e.target.value)} placeholder="Ar: / Ref" className="input-dark" />
           </div>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Finish Type</label>
+          <div className="flex gap-2">
+            {FINISH_TYPES.map(t => (
+              <button key={t} type="button" onClick={() => setFinishType(t)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${finishType === t ? 'bg-brand text-white border-brand' : 'border-gray-200 text-gray-500'}`}>
+                {t}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-gray-400 mt-1">Controls which Terms & Conditions and Work Order wording print on this quotation.</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -473,7 +561,7 @@ function CreateQuotation({ onSaved, showToast }: { onSaved: () => void; showToas
       </div>
 
       <div className="flex items-center justify-between py-2">
-        <button onClick={() => { setItems([newItem(1)]); setNextId(2); setClientName(''); setHandledBy(''); setEnquiredBy('') }}
+        <button onClick={() => { setItems([newItem(1)]); setNextId(2); setClientName(''); setHandledBy(''); setEnquiredBy(''); setFinishType('Standard') }}
           className="btn-ghost text-sm">Clear</button>
         <button disabled={!clientName || saving} onClick={handleSave} className="btn-gold flex items-center gap-1.5 text-sm disabled:opacity-50">
           {saving ? 'Saving...' : 'Save Quotation → Sheet'}

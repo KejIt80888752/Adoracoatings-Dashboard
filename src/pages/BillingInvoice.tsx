@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Save, FileText, List, Truck, CheckCheck } from 'lucide-react'
+import { Plus, Trash2, Save, FileText, FileSpreadsheet, List, Truck, CheckCheck } from 'lucide-react'
 import { fetchSheet, addRow, deleteRow } from '../lib/api'
 
 type Item = { id: number; particulars: string; qty: number; unit: string; rate: number }
-type Tab = 'invoice' | 'challan' | 'list'
+type Tab = 'invoice' | 'proforma' | 'challan' | 'list'
 type DocType = 'Tax Invoice' | 'Proforma Invoice'
 
 const UNITS = ['Nos', 'Mtr', 'Kg', 'Ltr', 'Set', 'Pair', 'Box', 'Roll']
@@ -66,8 +66,7 @@ type ChallanRow = {
 // ═══════════════════════════════════════════════════════════════════════════
 // TAX / PROFORMA INVOICE
 // ═══════════════════════════════════════════════════════════════════════════
-function InvoiceForm({ onSaved, showToast }: { onSaved: () => void; showToast: (m: string) => void }) {
-  const [docType, setDocType] = useState<DocType>('Tax Invoice')
+function InvoiceForm({ docType, onSaved, showToast }: { docType: DocType; onSaved: () => void; showToast: (m: string) => void }) {
   const [invNo]             = useState(() => getInvNo(docType))
   const [invDate, setInvDate] = useState(today)
   const [state, setState]   = useState('Karnataka')
@@ -126,14 +125,6 @@ function InvoiceForm({ onSaved, showToast }: { onSaved: () => void; showToast: (
   return (
     <div className="space-y-4">
       <div className="card space-y-4">
-        <div className="flex gap-2">
-          {(['Tax Invoice', 'Proforma Invoice'] as DocType[]).map(t => (
-            <button key={t} onClick={() => setDocType(t)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${docType === t ? 'bg-brand text-white border-brand' : 'border-gray-200 text-gray-500'}`}>
-              {t}
-            </button>
-          ))}
-        </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{docType} No</label>
@@ -724,21 +715,24 @@ export default function BillingInvoice() {
   const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(''), 3000) }
 
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
-    { key: 'invoice', label: 'Invoice',  icon: <FileText size={14} /> },
-    { key: 'challan', label: 'Challan',  icon: <Truck    size={14} /> },
-    { key: 'list',    label: 'Document List', icon: <List size={14} /> },
+    { key: 'invoice',  label: 'Tax Invoice',      icon: <FileText size={14} /> },
+    { key: 'proforma', label: 'Proforma Invoice', icon: <FileSpreadsheet size={14} /> },
+    { key: 'challan',  label: 'Challan',          icon: <Truck    size={14} /> },
+    { key: 'list',     label: 'Document List',    icon: <List size={14} /> },
   ]
+
+  const titles: Record<Tab, string> = {
+    invoice: 'Tax Invoice', proforma: 'Proforma Invoice', challan: 'Delivery Challan', list: 'Document List',
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-800">
-            Billing — {tab === 'invoice' ? 'Tax / Proforma Invoice' : tab === 'challan' ? 'Delivery Challan' : 'Document List'}
-          </h1>
+          <h1 className="text-xl font-bold text-gray-800">Billing — {titles[tab]}</h1>
           <p className="text-xs text-gray-400 mt-0.5">GST Tax Invoice, Proforma Invoice & Delivery Challan</p>
         </div>
-        <div className="flex gap-1.5 bg-gray-100 p-1 rounded-xl">
+        <div className="flex gap-1.5 bg-gray-100 p-1 rounded-xl flex-wrap">
           {tabs.map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
@@ -750,9 +744,10 @@ export default function BillingInvoice() {
         </div>
       </div>
 
-      {tab === 'invoice' && <InvoiceForm onSaved={() => { setTab('list') }} showToast={showToast} />}
-      {tab === 'challan' && <ChallanForm onSaved={() => { setTab('list') }} showToast={showToast} />}
-      {tab === 'list'    && <InvoiceList onNew={() => setTab('invoice')} />}
+      {tab === 'invoice'  && <InvoiceForm docType="Tax Invoice" onSaved={() => { setTab('list') }} showToast={showToast} />}
+      {tab === 'proforma' && <InvoiceForm docType="Proforma Invoice" onSaved={() => { setTab('list') }} showToast={showToast} />}
+      {tab === 'challan'  && <ChallanForm onSaved={() => { setTab('list') }} showToast={showToast} />}
+      {tab === 'list'     && <InvoiceList onNew={() => setTab('invoice')} />}
 
       {toast && (
         <div className="fixed top-4 right-4 z-[9999] bg-brand text-white text-sm px-4 py-3 rounded-xl shadow-lg flex items-center gap-2">

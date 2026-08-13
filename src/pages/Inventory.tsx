@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Search, Warehouse, Package2, AlertCircle, Plus, X, CheckCheck, ArrowRight, RotateCcw, Truck, RefreshCw, Trash2 } from 'lucide-react'
+import { Search, Warehouse, Package2, AlertCircle, Plus, X, CheckCheck, ArrowRight, RotateCcw, Truck, RefreshCw, Trash2, Pencil } from 'lucide-react'
 import { addRow, fetchSheet, deleteRow } from '../lib/api'
 
 type StockLogRow = { Product: string; Location: string; Qty: number | string; Notes?: string; 'Updated By'?: string; Date?: string }
@@ -111,6 +111,9 @@ export default function Inventory() {
   const [tab, setTab]           = useState<Tab>('stock')
   const [addModal, setAddModal] = useState(false)
   const [transferModal, setTransferModal] = useState<StockItem | null>(null)
+  const [editModal, setEditModal] = useState<StockItem | null>(null)
+  const [editForm, setEditForm] = useState({ name:'', unit:'', packSize:'', godownQty:'', seaAirQty:'' })
+  const [editSaving, setEditSaving] = useState(false)
   const [toast, setToast]       = useState('')
   const [saving, setSaving]     = useState(false)
   const [syncing, setSyncing]   = useState(false)
@@ -216,6 +219,37 @@ export default function Inventory() {
     }))
     showToast(`✓ ${qty} units transferred — ${transDir === 'godown-to-sea' ? 'Godown → Sea Air' : 'Sea Air → Godown'}`)
     setTransferModal(null); setTransQty('')
+  }
+
+  const openEdit = (s: StockItem) => {
+    setEditForm({ name: s.name, unit: s.unit, packSize: s.packSize, godownQty: String(s.godownQty), seaAirQty: String(s.seaAirQty) })
+    setEditModal(s)
+  }
+
+  // Quantity corrections are persisted as signed delta entries in the same Stock
+  // sheet used by Add Stock, so they survive a reload/re-sync (matched by name,
+  // which is why product name itself isn't editable here). Pack size / unit are
+  // local catalog metadata and update immediately in the UI for this session.
+  const handleEditSave = async () => {
+    if (!editModal) return
+    setEditSaving(true)
+    const newGodown = Number(editForm.godownQty) || 0
+    const newSeaAir = Number(editForm.seaAirQty) || 0
+    const godownDelta = newGodown - editModal.godownQty
+    const seaAirDelta = newSeaAir - editModal.seaAirQty
+    if (godownDelta !== 0) {
+      await addRow('Stock', { Product: editModal.name, Location: 'Godown', Qty: godownDelta, Notes: 'Manual correction (Edit)', 'Updated By': 'Dashboard', Date: new Date().toLocaleDateString('en-IN') })
+    }
+    if (seaAirDelta !== 0) {
+      await addRow('Stock', { Product: editModal.name, Location: 'Sea Air Logistics', Qty: seaAirDelta, Notes: 'Manual correction (Edit)', 'Updated By': 'Dashboard', Date: new Date().toLocaleDateString('en-IN') })
+    }
+    setStock(prev => prev.map(s => s.sl !== editModal.sl ? s : {
+      ...s, unit: editForm.unit, packSize: editForm.packSize,
+      godownQty: newGodown, godownKg: newGodown, seaAirQty: newSeaAir, seaAirKg: newSeaAir,
+    }))
+    setEditSaving(false)
+    showToast(`✓ "${editModal.name}" updated`)
+    setEditModal(null)
   }
 
   const handleDispatch = async () => {
@@ -342,6 +376,7 @@ export default function Inventory() {
                     <th className="text-center font-bold">Total Kg/L</th>
                     <th className="text-center">Status</th>
                     <th className="text-center">Transfer</th>
+                    <th className="text-center">Edit</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -365,6 +400,12 @@ export default function Inventory() {
                           <button onClick={() => { setTransferModal(s); setTransDir('godown-to-sea') }}
                             className="p-1.5 rounded-lg transition-colors hover:bg-brand-50 text-brand" title="Transfer between locations">
                             <ArrowRight size={13}/>
+                          </button>
+                        </td>
+                        <td className="text-center">
+                          <button onClick={() => openEdit(s)}
+                            className="p-1.5 rounded-lg transition-colors hover:bg-brand-50 text-brand" title="Edit product">
+                            <Pencil size={13}/>
                           </button>
                         </td>
                       </tr>
@@ -575,6 +616,43 @@ export default function Inventory() {
               <button onClick={handleTransfer} disabled={!transQty}
                 className="flex-1 btn-gold text-sm disabled:opacity-50 flex items-center justify-center gap-1.5">
                 <ArrowRight size={13}/>Transfer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setEditModal(null)}>
+          <div className="rounded-2xl w-full max-w-sm shadow-2xl" style={{background:'var(--bg-card)'}} onClick={e=>e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4" style={{borderBottom:'1px solid var(--border-2)'}}>
+              <h2 className="font-semibold text-sm" style={{color:'var(--text-1)'}}>Edit Product</h2>
+              <button onClick={() => setEditModal(null)} style={{color:'var(--text-4)'}}><X size={16}/></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="p-3 rounded-xl text-sm font-medium" style={{background:'var(--bg-card2)', color:'var(--text-1)'}}>
+                {editModal.name}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color:'var(--text-3)'}}>Unit</label>
+                  <input className="input-dark" value={editForm.unit} onChange={e=>setEditForm(f=>({...f,unit:e.target.value}))}/></div>
+                <div><label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color:'var(--text-3)'}}>Pack Size</label>
+                  <input className="input-dark" value={editForm.packSize} onChange={e=>setEditForm(f=>({...f,packSize:e.target.value}))}/></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color:'var(--text-3)'}}>Godown Qty</label>
+                  <input type="number" min="0" className="input-dark" value={editForm.godownQty} onChange={e=>setEditForm(f=>({...f,godownQty:e.target.value}))}/></div>
+                <div><label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color:'var(--text-3)'}}>Sea Air Qty</label>
+                  <input type="number" min="0" className="input-dark" value={editForm.seaAirQty} onChange={e=>setEditForm(f=>({...f,seaAirQty:e.target.value}))}/></div>
+              </div>
+              <p className="text-[11px]" style={{color:'var(--text-4)'}}>Changing Godown/Sea Air Qty logs a correction entry so the new count is saved.</p>
+            </div>
+            <div className="px-5 pb-5 flex gap-2">
+              <button onClick={() => setEditModal(null)} className="flex-1 btn-outline-gold text-sm">Cancel</button>
+              <button onClick={handleEditSave} disabled={editSaving}
+                className="flex-1 btn-gold text-sm disabled:opacity-50 flex items-center justify-center gap-1.5">
+                <Pencil size={13}/>{editSaving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>

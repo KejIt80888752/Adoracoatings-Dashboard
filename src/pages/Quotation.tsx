@@ -7,7 +7,7 @@ const fmt = (n: number) => '₹' + n.toLocaleString('en-IN')
 type Item = { id: number; particulars: string; texture: string; length: number; height: number; nos: number; coefficient: number; rate: number }
 type QuoteRow = { 'Quote No': string; Date: string; 'Client Name': string; 'Client Address': string; 'Handled By': string; 'Enquired By': string; 'Finish Type': string; Items: string; Total: string; GST: string; 'Grand Total': string; Status: string }
 
-const FINISH_TYPES = ['Standard', 'MICROLITE'] as const
+const FINISH_TYPES = ['Acralic', 'MICROLITE'] as const
 type FinishType = typeof FINISH_TYPES[number]
 
 // ── MICROLITE-specific terms (from QUOTATION FORMAT FOR MICROLITE.xlsx) ───────
@@ -401,7 +401,7 @@ function CreateQuotation({ onSaved, showToast }: { onSaved: () => void; showToas
   const [clientAddr, setClientAddr] = useState('Bangalore')
   const [handledBy, setHandledBy]   = useState('')
   const [enquiredBy, setEnquiredBy] = useState('')
-  const [finishType, setFinishType] = useState<FinishType>('Standard')
+  const [finishType, setFinishType] = useState<FinishType>('Acralic')
   const [items, setItems]   = useState<Item[]>([newItem(1)])
   const [nextId, setNextId] = useState(2)
   const [saving, setSaving] = useState(false)
@@ -561,7 +561,7 @@ function CreateQuotation({ onSaved, showToast }: { onSaved: () => void; showToas
       </div>
 
       <div className="flex items-center justify-between py-2">
-        <button onClick={() => { setItems([newItem(1)]); setNextId(2); setClientName(''); setHandledBy(''); setEnquiredBy(''); setFinishType('Standard') }}
+        <button onClick={() => { setItems([newItem(1)]); setNextId(2); setClientName(''); setHandledBy(''); setEnquiredBy(''); setFinishType('Acralic') }}
           className="btn-ghost text-sm">Clear</button>
         <button disabled={!clientName || saving} onClick={handleSave} className="btn-gold flex items-center gap-1.5 text-sm disabled:opacity-50">
           {saving ? 'Saving...' : 'Save Quotation → Sheet'}

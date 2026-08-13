@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Search, Package, Download, Plus, Trash2, CheckCheck, X } from 'lucide-react'
+import { Search, Package, Download, Plus, Trash2, CheckCheck, X, Pencil } from 'lucide-react'
 import { fetchSheet, addRow, deleteRow } from '../lib/api'
 
 type ProductRow = { Name: string; Category: string; 'Pack Size': string; Unit: string; Rate: string; GST: string }
@@ -32,6 +32,7 @@ export default function Products() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading]   = useState(false)
   const [showAdd, setShowAdd]   = useState(false)
+  const [editProduct, setEditProduct] = useState<Product | null>(null)
   const [deletingRow, setDeletingRow] = useState<number | null>(null)
   const [toast, setToast]   = useState('')
 
@@ -122,15 +123,16 @@ export default function Products() {
                 <th>Unit</th>
                 <th className="text-right">Rate</th>
                 <th className="text-center">GST</th>
+                <th>Edit</th>
                 <th>Delete</th>
               </tr>
             </thead>
             <tbody>
               {loading && (
-                <tr><td colSpan={8} className="text-center py-10 text-gray-400">Loading…</td></tr>
+                <tr><td colSpan={9} className="text-center py-10 text-gray-400">Loading…</td></tr>
               )}
               {!loading && filtered.length === 0 && (
-                <tr><td colSpan={8} className="text-center py-10 text-gray-400">
+                <tr><td colSpan={9} className="text-center py-10 text-gray-400">
                   <Package size={32} className="mx-auto mb-2 opacity-30" />No products found
                 </td></tr>
               )}
@@ -150,6 +152,12 @@ export default function Products() {
                   </td>
                   <td className="text-center text-gray-400 text-xs">{fmtGst(p.GST)}</td>
                   <td>
+                    <button onClick={() => setEditProduct(p)}
+                      className="p-1.5 rounded-lg transition-colors hover:bg-brand/10 text-brand" title="Edit product">
+                      <Pencil size={13}/>
+                    </button>
+                  </td>
+                  <td>
                     <button onClick={() => handleDelete(p)} disabled={deletingRow === p.rowIndex}
                       className="p-1.5 rounded-lg transition-colors hover:bg-red-50 text-red-500 disabled:opacity-40" title="Delete product">
                       <Trash2 size={13}/>
@@ -163,6 +171,14 @@ export default function Products() {
       </div>
 
       {showAdd && <AddProductModal onClose={() => setShowAdd(false)} onAdded={() => { setShowAdd(false); load() }} showToast={showToast} />}
+      {editProduct && (
+        <AddProductModal
+          editing={editProduct}
+          onClose={() => setEditProduct(null)}
+          onAdded={() => { setEditProduct(null); load() }}
+          showToast={showToast}
+        />
+      )}
 
       {toast && (
         <div className="fixed top-4 right-4 z-[9999] bg-brand text-white text-sm px-4 py-3 rounded-xl shadow-lg flex items-center gap-2">
@@ -173,18 +189,27 @@ export default function Products() {
   )
 }
 
-function AddProductModal({ onClose, onAdded, showToast }: { onClose: () => void; onAdded: () => void; showToast: (m: string) => void }) {
-  const [name, setName]         = useState('')
-  const [category, setCategory] = useState(FORM_CATEGORIES[0])
-  const [packSize, setPackSize] = useState('')
-  const [unit, setUnit]         = useState('Kg')
-  const [rate, setRate]         = useState('')
-  const [gst, setGst]           = useState('18%')
+function AddProductModal({ editing, onClose, onAdded, showToast }: { editing?: Product; onClose: () => void; onAdded: () => void; showToast: (m: string) => void }) {
+  const [name, setName]         = useState(editing?.Name ?? '')
+  const [category, setCategory] = useState(editing?.Category ?? FORM_CATEGORIES[0])
+  const [packSize, setPackSize] = useState(editing?.['Pack Size'] ?? '')
+  const [unit, setUnit]         = useState(editing?.Unit ?? 'Kg')
+  const [rate, setRate]         = useState(editing?.Rate ?? '')
+  const [gst, setGst]           = useState(editing ? `${fmtGst(editing.GST)}` : '18%')
   const [saving, setSaving]     = useState(false)
 
   const handleSave = async () => {
     if (!name) return
     setSaving(true)
+    // No update-in-place API — editing deletes the old row then adds the new one.
+    if (editing) {
+      const delResult = await deleteRow('Products', editing.rowIndex)
+      if (delResult?.status !== 'ok') {
+        setSaving(false)
+        showToast(`✗ Failed to update: ${delResult?.error || 'unknown error'}`)
+        return
+      }
+    }
     const result = await addRow('Products', {
       Name: name,
       Category: category,
@@ -194,15 +219,15 @@ function AddProductModal({ onClose, onAdded, showToast }: { onClose: () => void;
       GST: gst,
     })
     setSaving(false)
-    if (result?.status === 'ok') { showToast(`✓ "${name}" added`); onAdded() }
-    else showToast(`✗ Failed to add: ${result?.error || 'unknown error'}`)
+    if (result?.status === 'ok') { showToast(`✓ "${name}" ${editing ? 'updated' : 'added'}`); onAdded() }
+    else showToast(`✗ Failed to save: ${result?.error || 'unknown error'}`)
   }
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-800">Add Product</h2>
+          <h2 className="font-semibold text-gray-800">{editing ? 'Edit Product' : 'Add Product'}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18}/></button>
         </div>
         <div className="p-6 space-y-4">
@@ -244,7 +269,7 @@ function AddProductModal({ onClose, onAdded, showToast }: { onClose: () => void;
         <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-100">
           <button onClick={onClose} className="btn-ghost text-sm">Cancel</button>
           <button disabled={!name || saving} onClick={handleSave} className="btn-gold text-sm disabled:opacity-50">
-            {saving ? 'Saving...' : 'Add Product'}
+            {saving ? 'Saving...' : editing ? 'Save Changes' : 'Add Product'}
           </button>
         </div>
       </div>

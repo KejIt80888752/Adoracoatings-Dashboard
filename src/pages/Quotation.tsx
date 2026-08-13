@@ -288,7 +288,7 @@ function WorkOrderModal({ quote: q, onClose }: { quote: QuoteRow & { rowIndex: n
         </div>
 
         <div className="p-8 text-sm text-gray-800">
-          <h1 className="text-xl font-bold text-brand">Adora Coatings</h1>
+          <img src={`${import.meta.env.BASE_URL}adora-logo.png`} alt="Adora Coatings" className="h-16 mb-2" />
           <p className="text-xs text-gray-500 mb-4">GST NO: 29AHDPA4964B1ZN &nbsp;|&nbsp; 175/1, Pavilion Rd, Jaya Nagar 1st Block, Bengaluru 560011</p>
 
           <div className="grid grid-cols-2 gap-4 mb-4 text-xs">

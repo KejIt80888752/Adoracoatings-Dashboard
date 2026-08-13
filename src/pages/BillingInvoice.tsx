@@ -285,6 +285,7 @@ function InvoicePrintModal({ data, onClose }: { data: any; onClose: () => void }
           </div>
         </div>
         <div className="p-8 text-sm text-gray-800">
+          <img src={`${import.meta.env.BASE_URL}adora-logo.png`} alt="Adora Coatings" className="h-14 mb-2" />
           <h1 className="text-xl font-bold text-brand uppercase">{d.docType}</h1>
           <p className="text-xs text-gray-500 mb-4">GST NO: {COMPANY_GST}</p>
 
@@ -525,6 +526,7 @@ function ChallanPrintModal({ data: d, onClose }: { data: any; onClose: () => voi
           </div>
         </div>
         <div className="p-8 text-xs text-gray-800">
+          <img src={`${import.meta.env.BASE_URL}adora-logo.png`} alt="Adora Coatings" className="h-12 mb-3" />
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <p className="font-bold text-brand">CONSIGNOR:</p>

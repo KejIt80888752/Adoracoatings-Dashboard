@@ -395,7 +395,7 @@ function WorkOrderModal({ quote: q, onClose }: { quote: QuoteRow & { rowIndex: n
 }
 
 function CreateQuotation({ onSaved, showToast }: { onSaved: () => void; showToast: (m: string) => void }) {
-  const [quoteNo]           = useState(getQuoteNo)
+  const [quoteNo, setQuoteNo] = useState(getQuoteNo)
   const [date, setDate]     = useState(today)
   const [clientName, setClientName] = useState('')
   const [clientAddr, setClientAddr] = useState('Bangalore')
@@ -444,7 +444,7 @@ function CreateQuotation({ onSaved, showToast }: { onSaved: () => void; showToas
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Quotation No</label>
-            <div className="input-dark bg-gray-50 text-gray-500 text-sm font-mono">{quoteNo}</div>
+            <input value={quoteNo} onChange={e => setQuoteNo(e.target.value)} className="input-dark font-mono" />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Date</label>

@@ -67,7 +67,7 @@ type ChallanRow = {
 // TAX / PROFORMA INVOICE
 // ═══════════════════════════════════════════════════════════════════════════
 function InvoiceForm({ docType, onSaved, showToast }: { docType: DocType; onSaved: () => void; showToast: (m: string) => void }) {
-  const [invNo]             = useState(() => getInvNo(docType))
+  const [invNo, setInvNo]   = useState(() => getInvNo(docType))
   const [invDate, setInvDate] = useState(today)
   const [state, setState]   = useState('Karnataka')
   const [party, setParty]   = useState('')
@@ -128,7 +128,7 @@ function InvoiceForm({ docType, onSaved, showToast }: { docType: DocType; onSave
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{docType} No</label>
-            <div className="input-dark bg-gray-50 text-gray-500 text-sm font-mono">{invNo}</div>
+            <input value={invNo} onChange={e => setInvNo(e.target.value)} className="input-dark font-mono" />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Date</label>
@@ -362,7 +362,7 @@ function newSample(id: number): Sample {
 }
 
 function ChallanForm({ onSaved, showToast }: { onSaved: () => void; showToast: (m: string) => void }) {
-  const [challanNo]         = useState(getChallanNo)
+  const [challanNo, setChallanNo] = useState(getChallanNo)
   const [challanDate, setChallanDate] = useState(today)
   const [clientProject, setClientProject] = useState('')
   const [deliveryAddr, setDeliveryAddr]   = useState('')
@@ -413,7 +413,7 @@ function ChallanForm({ onSaved, showToast }: { onSaved: () => void; showToast: (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Consignment No</label>
-            <div className="input-dark bg-gray-50 text-gray-500 text-sm font-mono">{challanNo}</div>
+            <input value={challanNo} onChange={e => setChallanNo(e.target.value)} className="input-dark font-mono" />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Date</label>

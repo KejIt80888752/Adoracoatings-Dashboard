@@ -101,8 +101,16 @@ const MEASUREMENT_TERMS = [
   'Any Other Method: If there is any other method, the Client shall provide details before the commencement of the work. Additional charges will be applicable.',
 ]
 
-let nextQuoteNum = 1
-const getQuoteNo = () => `ACQ-${String(nextQuoteNum++).padStart(3,'0')}/26-27`
+// Derives the next quote number from existing records instead of an in-memory
+// counter, so suggested numbers don't collide with earlier saved quotations
+// after a page reload (the counter would otherwise reset to 1 every time).
+const nextQuoteNo = (existing: QuoteRow[]) => {
+  const max = existing.reduce((m, q) => {
+    const n = Number((q['Quote No'] || '').match(/ACQ-(\d+)/)?.[1])
+    return Number.isFinite(n) && n > m ? n : m
+  }, 0)
+  return `ACQ-${String(max + 1).padStart(3,'0')}/26-27`
+}
 const today = new Date().toLocaleDateString('en-IN')
 
 function newItem(id: number): Item {
@@ -249,7 +257,7 @@ export default function Quotation() {
         </>
       )}
 
-      {tab === 'create' && <CreateQuotation onSaved={() => { setTab('list'); loadQuotes() }} showToast={showToast} />}
+      {tab === 'create' && <CreateQuotation existingQuotes={quotes} onSaved={() => { setTab('list'); loadQuotes() }} showToast={showToast} />}
 
       {workOrderQuote && <WorkOrderModal quote={workOrderQuote} onClose={() => setWorkOrderQuote(null)} />}
 
@@ -268,10 +276,10 @@ function WorkOrderModal({ quote: q, onClose }: { quote: QuoteRow & { rowIndex: n
   const isMicrolite = q['Finish Type'] === 'MICROLITE'
 
   const Section = ({ title, terms }: { title: string; terms: string[] }) => (
-    <div className="mb-5">
-      <h3 className="text-sm font-bold text-brand border-b-2 border-brand pb-1 mb-2">{title}</h3>
-      <ol className="space-y-1.5 text-xs text-gray-700">
-        {terms.map((t, i) => <li key={i}><b>{i + 1}.</b> {t}</li>)}
+    <div className="border border-gray-400 mb-4">
+      <h3 className="text-xs font-bold text-brand bg-gray-50 px-2 py-1.5 border-b border-gray-400">{title}</h3>
+      <ol className="divide-y divide-gray-400 text-xs text-gray-700">
+        {terms.map((t, i) => <li key={i} className="px-2 py-1.5"><b>{i + 1}.</b> {t}</li>)}
       </ol>
     </div>
   )
@@ -291,68 +299,73 @@ function WorkOrderModal({ quote: q, onClose }: { quote: QuoteRow & { rowIndex: n
           <img src={`${import.meta.env.BASE_URL}adora-logo.png`} alt="Adora Coatings" className="h-16 mb-2" />
           <p className="text-xs text-gray-500 mb-4">GST NO: 29AHDPA4964B1ZN &nbsp;|&nbsp; 175/1, Pavilion Rd, Jaya Nagar 1st Block, Bengaluru 560011</p>
 
-          <div className="grid grid-cols-2 gap-4 mb-4 text-xs">
-            <div>
-              <p><b>Quotation No:</b> {q['Quote No']}</p>
-              <p><b>Date:</b> {q.Date}</p>
-              <p><b>Handled By:</b> {q['Handled By'] || '—'}</p>
-              <p><b>Enquired By / Reference:</b> {q['Enquired By'] || '—'}</p>
+          {/* Boxed grid, matching the bordered layout of the source Excel sheet */}
+          <div className="border border-gray-400 mb-6">
+            <div className="grid grid-cols-2 text-xs divide-x divide-gray-400 border-b border-gray-400">
+              <div className="p-2 space-y-0.5">
+                <p><b>Quotation No:</b> {q['Quote No']}</p>
+                <p><b>Date:</b> {q.Date}</p>
+                <p><b>Handled By:</b> {q['Handled By'] || '—'}</p>
+                <p><b>Enquired By / Reference:</b> {q['Enquired By'] || '—'}</p>
+              </div>
+              <div className="p-2 space-y-0.5">
+                <p><b>Client Name:</b> {q['Client Name']}</p>
+                <p><b>Address:</b> {q['Client Address'] || '—'}</p>
+              </div>
             </div>
-            <div>
-              <p><b>Client Name:</b> {q['Client Name']}</p>
-              <p><b>Address:</b> {q['Client Address'] || '—'}</p>
-            </div>
-          </div>
 
-          <h3 className="text-sm font-bold text-brand border-b-2 border-brand pb-1 mb-2">Item Details</h3>
-          <table className="w-full text-xs mb-2 border-collapse">
-            <thead>
-              <tr className="bg-gray-50">
-                {['SL','Particulars','Texture','Length','Height','Nos','Co-eff','Area (SFT)','Rate','Amount'].map(h => (
-                  <th key={h} className="border border-gray-200 px-2 py-1.5 text-left">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((it, i) => (
-                <tr key={i}>
-                  <td className="border border-gray-200 px-2 py-1.5">{i + 1}</td>
-                  <td className="border border-gray-200 px-2 py-1.5">{it.particulars}</td>
-                  <td className="border border-gray-200 px-2 py-1.5">{it.texture}</td>
-                  <td className="border border-gray-200 px-2 py-1.5 text-right">{it.length || 0}</td>
-                  <td className="border border-gray-200 px-2 py-1.5 text-right">{it.height || 0}</td>
-                  <td className="border border-gray-200 px-2 py-1.5 text-right">{it.nos || 0}</td>
-                  <td className="border border-gray-200 px-2 py-1.5 text-right">{it.coefficient || 0}</td>
-                  <td className="border border-gray-200 px-2 py-1.5 text-right">{(it.area ?? area(it)).toLocaleString('en-IN')}</td>
-                  <td className="border border-gray-200 px-2 py-1.5 text-right">{(it.rate || 0).toLocaleString('en-IN')}</td>
-                  <td className="border border-gray-200 px-2 py-1.5 text-right">{fmt(it.amount ?? amount(it))}</td>
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr className="bg-gray-50">
+                  {['SL','Particulars','Texture','Length','Height','Nos','Co-eff','Area (SFT)','Rate','Amount'].map(h => (
+                    <th key={h} className="border-b border-r last:border-r-0 border-gray-400 px-2 py-1.5 text-left">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="w-64 ml-auto space-y-1 text-xs mb-4">
-            <div className="flex justify-between"><span>Total</span><span>{fmt(Number(q.Total) || 0)}</span></div>
-            <div className="flex justify-between"><span>GST Additional @ 18%</span><span>{fmt(Number(q.GST) || 0)}</span></div>
-            <div className="flex justify-between font-bold text-brand text-sm border-t-2 border-brand pt-1"><span>Grand Total</span><span>{fmt(Number(q['Grand Total']) || 0)}</span></div>
-          </div>
+              </thead>
+              <tbody>
+                {items.map((it, i) => (
+                  <tr key={i}>
+                    <td className="border-b border-r border-gray-400 px-2 py-1.5">{i + 1}</td>
+                    <td className="border-b border-r border-gray-400 px-2 py-1.5">{it.particulars}</td>
+                    <td className="border-b border-r border-gray-400 px-2 py-1.5">{it.texture}</td>
+                    <td className="border-b border-r border-gray-400 px-2 py-1.5 text-right">{it.length || 0}</td>
+                    <td className="border-b border-r border-gray-400 px-2 py-1.5 text-right">{it.height || 0}</td>
+                    <td className="border-b border-r border-gray-400 px-2 py-1.5 text-right">{it.nos || 0}</td>
+                    <td className="border-b border-r border-gray-400 px-2 py-1.5 text-right">{it.coefficient || 0}</td>
+                    <td className="border-b border-r border-gray-400 px-2 py-1.5 text-right">{(it.area ?? area(it)).toLocaleString('en-IN')}</td>
+                    <td className="border-b border-r border-gray-400 px-2 py-1.5 text-right">{(it.rate || 0).toLocaleString('en-IN')}</td>
+                    <td className="border-b border-gray-400 px-2 py-1.5 text-right">{fmt(it.amount ?? amount(it))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs mb-4">
-            <b>PLEASE NOTE:</b> The validity of this quotation is 4 days. Rates will vary as per the colour shade — exact rates shall be quoted once the colours are decided.
-          </div>
+            <div className="flex justify-end text-xs border-b border-gray-400">
+              <div className="w-64 divide-y divide-gray-400 border-l border-gray-400">
+                <div className="flex justify-between px-2 py-1"><span>Total</span><span>{fmt(Number(q.Total) || 0)}</span></div>
+                <div className="flex justify-between px-2 py-1"><span>GST Additional @ 18%</span><span>{fmt(Number(q.GST) || 0)}</span></div>
+                <div className="flex justify-between px-2 py-1 font-bold text-brand"><span>Grand Total</span><span>{fmt(Number(q['Grand Total']) || 0)}</span></div>
+              </div>
+            </div>
 
-          <div className="grid grid-cols-3 gap-4 text-xs mb-6 whitespace-pre-line">
-            <div><b>BANK DETAILS:</b><br/>{BANK_DETAILS}</div>
-            <div><b>ADDRESS:</b><br/>{COMPANY_ADDRESS}</div>
-            <div><b>PAYMENT TERMS:</b><br/>{PAYMENT_TERMS}</div>
+            <div className="px-2 py-2 text-xs bg-yellow-50 border-b border-gray-400">
+              <b>PLEASE NOTE:</b> The validity of this quotation is 4 days. Rates will vary as per the colour shade — exact rates shall be quoted once the colours are decided.
+            </div>
+
+            <div className="grid grid-cols-3 text-xs divide-x divide-gray-400 whitespace-pre-line">
+              <div className="p-2"><b>BANK DETAILS:</b><br/>{BANK_DETAILS}</div>
+              <div className="p-2"><b>ADDRESS:</b><br/>{COMPANY_ADDRESS}</div>
+              <div className="p-2"><b>PAYMENT TERMS:</b><br/>{PAYMENT_TERMS}</div>
+            </div>
           </div>
 
           {isMicrolite ? (
             <>
-              <p className="text-xs text-gray-700 mb-4">{MICROLITE_PREPARATION_INTRO}</p>
-              <h3 className="text-sm font-bold text-brand border-b-2 border-brand pb-1 mb-2">Preparation</h3>
+              <div className="border border-gray-400 mb-4 p-2 text-xs text-gray-700">{MICROLITE_PREPARATION_INTRO}</div>
+              <h3 className="text-xs font-bold text-brand bg-gray-50 border border-gray-400 px-2 py-1.5 mb-4">Preparation</h3>
               <Section title="1. Site Condition & Preparation" terms={MICROLITE_SITE_TERMS} />
               <Section title="2. Client Responsibilities" terms={MICROLITE_CLIENT_TERMS} />
-              <h3 className="text-sm font-bold text-brand border-b-2 border-brand pb-1 mb-2">A few things to know before you take the leap…</h3>
+              <h3 className="text-xs font-bold text-brand bg-gray-50 border border-gray-400 px-2 py-1.5 mb-4">A few things to know before you take the leap…</h3>
               <Section title="1. Material Shades & Nuances" terms={MICROLITE_SHADE_TERMS} />
               <Section title="2. Protection & Precaution" terms={MICROLITE_PROTECTION_TERMS} />
               <Section title="3. Workflow" terms={MICROLITE_WORKFLOW_TERMS} />
@@ -367,26 +380,27 @@ function WorkOrderModal({ quote: q, onClose }: { quote: QuoteRow & { rowIndex: n
             </>
           )}
 
-          <h3 className="text-sm font-bold text-brand border-b-2 border-brand pb-1 mb-2">Work Order</h3>
-          <div className="text-xs space-y-2 mb-10">
-            <p><b>From:</b> Adora Coatings, 171/1 Pavilion Road, Jayanagar 1st Block, Bangalore-560011</p>
-            <p><b>Dear {q['Client Name']},</b></p>
-            {isMicrolite ? (
-              <>
-                <p>We hereby appoint your company for MICROLITE Services as detailed below:</p>
-                <p><b>Project Name:</b> {q['Client Name']}<br/><b>Project Address:</b> {q['Client Address'] || '—'}</p>
-                <p><b>Services:</b> Ref Item Details table above &nbsp; <b>Fees:</b> {fmt(Number(q['Grand Total']) || 0)} (inclusive of GST), as per Quotation No. {q['Quote No']} dated {q.Date}.</p>
-                <p>This letter of appointment together with the conditions of contract as stated above, shall govern the agreement.</p>
-              </>
-            ) : (
-              <p>We hereby appoint Adora Coatings for the services detailed in the item table above, as per Quotation No. {q['Quote No']} dated {q.Date}, for a total value of {fmt(Number(q['Grand Total']) || 0)} (inclusive of GST).</p>
-            )}
-            <p>Thanking you,<br/>Yours sincerely,</p>
-          </div>
-
-          <div className="flex justify-between gap-8 text-xs">
-            <div className="flex-1 border-t border-gray-400 pt-2 text-center">Signature: ADORA COATINGS<br/><br/>Date: _______________</div>
-            <div className="flex-1 border-t border-gray-400 pt-2 text-center">Signature: CLIENT / CUSTOMER<br/><br/>Date: _______________</div>
+          <div className="border border-gray-400 mb-6">
+            <h3 className="text-xs font-bold text-brand bg-gray-50 px-2 py-1.5 border-b border-gray-400">Work Order</h3>
+            <div className="text-xs p-3 space-y-2">
+              <p><b>From:</b> Adora Coatings, 171/1 Pavilion Road, Jayanagar 1st Block, Bangalore-560011</p>
+              <p><b>Dear {q['Client Name']},</b></p>
+              {isMicrolite ? (
+                <>
+                  <p>We hereby appoint your company for MICROLITE Services as detailed below:</p>
+                  <p><b>Project Name:</b> {q['Client Name']}<br/><b>Project Address:</b> {q['Client Address'] || '—'}</p>
+                  <p><b>Services:</b> Ref Item Details table above &nbsp; <b>Fees:</b> {fmt(Number(q['Grand Total']) || 0)} (inclusive of GST), as per Quotation No. {q['Quote No']} dated {q.Date}.</p>
+                  <p>This letter of appointment together with the conditions of contract as stated above, shall govern the agreement.</p>
+                </>
+              ) : (
+                <p>We hereby appoint Adora Coatings for the services detailed in the item table above, as per Quotation No. {q['Quote No']} dated {q.Date}, for a total value of {fmt(Number(q['Grand Total']) || 0)} (inclusive of GST).</p>
+              )}
+              <p>Thanking you,<br/>Yours sincerely,</p>
+            </div>
+            <div className="flex justify-between text-xs border-t border-gray-400 divide-x divide-gray-400">
+              <div className="flex-1 p-3 text-center">Signature: ADORA COATINGS<br/><br/>Date: _______________</div>
+              <div className="flex-1 p-3 text-center">Signature: CLIENT / CUSTOMER<br/><br/>Date: _______________</div>
+            </div>
           </div>
         </div>
       </div>
@@ -394,8 +408,8 @@ function WorkOrderModal({ quote: q, onClose }: { quote: QuoteRow & { rowIndex: n
   )
 }
 
-function CreateQuotation({ onSaved, showToast }: { onSaved: () => void; showToast: (m: string) => void }) {
-  const [quoteNo, setQuoteNo] = useState(getQuoteNo)
+function CreateQuotation({ existingQuotes, onSaved, showToast }: { existingQuotes: QuoteRow[]; onSaved: () => void; showToast: (m: string) => void }) {
+  const [quoteNo, setQuoteNo] = useState(() => nextQuoteNo(existingQuotes))
   const [date, setDate]     = useState(today)
   const [clientName, setClientName] = useState('')
   const [clientAddr, setClientAddr] = useState('Bangalore')

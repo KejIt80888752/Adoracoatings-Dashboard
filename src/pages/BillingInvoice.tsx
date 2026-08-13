@@ -14,12 +14,28 @@ const COMPANY_ADDRESS = '175/1, Pavilion Rd,\nJaya Nagar, 1st Block,\nBengaluru 
 const COMPANY_FOOTER = 'P: 98800 33353 | 98800 44000\nE: info@adoracoatings.com\nW: www.adoracoatings.com'
 const BANK_DETAILS = 'Bank Name: Union Bank\nAccount Number: 070525090000001\nIFSC Code: UBIN0907057\nBranch: Whitefield'
 
-let nextInvNum = 1
-const getInvNo = (type: DocType) => type === 'Tax Invoice'
-  ? `AFS/INV/${String(nextInvNum++).padStart(3,'0')}/2026-27`
-  : `AFS/PI/${String(nextInvNum++).padStart(3,'0')}/2026-27`
-let nextChallanNum = 1
-const getChallanNo = () => `AC-${String(nextChallanNum++).padStart(3,'0')}/26-27`
+// Suggested numbers are derived from existing saved records (fetched fresh on
+// mount) rather than an in-memory counter, so they don't collide with earlier
+// saved documents after a page reload.
+const getInvNo = (type: DocType) => type === 'Tax Invoice' ? 'AFS/INV/001/2026-27' : 'AFS/PI/001/2026-27'
+const nextInvNo = (type: DocType, existing: InvoiceRow[]) => {
+  const prefix = type === 'Tax Invoice' ? 'AFS/INV/' : 'AFS/PI/'
+  const max = existing.reduce((m, r) => {
+    const no = r['Invoice No'] || ''
+    if (!no.startsWith(prefix)) return m
+    const n = Number(no.slice(prefix.length).match(/^\d+/)?.[0])
+    return Number.isFinite(n) && n > m ? n : m
+  }, 0)
+  return `${prefix}${String(max + 1).padStart(3,'0')}/2026-27`
+}
+const getChallanNo = () => 'AC-001/26-27'
+const nextChallanNo = (existing: ChallanRow[]) => {
+  const max = existing.reduce((m, r) => {
+    const n = Number((r['Challan No'] || '').match(/AC-(\d+)/)?.[1])
+    return Number.isFinite(n) && n > m ? n : m
+  }, 0)
+  return `AC-${String(max + 1).padStart(3,'0')}/26-27`
+}
 const today = new Date().toLocaleDateString('en-IN')
 
 function newItem(id: number): Item {
@@ -68,6 +84,7 @@ type ChallanRow = {
 // ═══════════════════════════════════════════════════════════════════════════
 function InvoiceForm({ docType, onSaved, showToast }: { docType: DocType; onSaved: () => void; showToast: (m: string) => void }) {
   const [invNo, setInvNo]   = useState(() => getInvNo(docType))
+  useEffect(() => { fetchSheet<InvoiceRow>('Invoices').then(rows => setInvNo(nextInvNo(docType, rows))) }, [docType])
   const [invDate, setInvDate] = useState(today)
   const [state, setState]   = useState('Karnataka')
   const [party, setParty]   = useState('')
@@ -363,6 +380,7 @@ function newSample(id: number): Sample {
 
 function ChallanForm({ onSaved, showToast }: { onSaved: () => void; showToast: (m: string) => void }) {
   const [challanNo, setChallanNo] = useState(getChallanNo)
+  useEffect(() => { fetchSheet<ChallanRow>('Challans').then(rows => setChallanNo(nextChallanNo(rows))) }, [])
   const [challanDate, setChallanDate] = useState(today)
   const [clientProject, setClientProject] = useState('')
   const [deliveryAddr, setDeliveryAddr]   = useState('')

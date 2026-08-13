@@ -120,6 +120,7 @@ export default function Inventory() {
   const [lastSynced, setLastSynced] = useState('')
   const [logEntries, setLogEntries] = useState<StockLogEntry[]>([])
   const [deletingRow, setDeletingRow] = useState<number | null>(null)
+  const [deletingProduct, setDeletingProduct] = useState<number | null>(null)
 
   // Add stock form
   const [form, setForm]         = useState({ product:'', location:'Godown', qty:'', notes:'' })
@@ -138,13 +139,17 @@ export default function Inventory() {
   // Pull stock movement history from the Google Sheet and replay it on top of
   // the physical-audit baseline (INITIAL_STOCK), so a page reload doesn't lose
   // any Add Stock / Dispatch / Return / Transfer actions logged since the audit.
+  // A 'Deleted' location entry permanently removes a product from the catalog
+  // — it's excluded from the baseline before any other row is replayed.
   const syncFromSheet = useCallback(async (silent = false) => {
     setSyncing(true)
     const rows = await fetchSheet<StockLogRow>('Stock')
     if (rows.length > 0) {
       setStock(() => {
-        const next = INITIAL_STOCK.map(s => ({ ...s }))
+        const deletedNames = new Set(rows.filter(r => r.Location === 'Deleted').map(r => r.Product))
+        const next = INITIAL_STOCK.filter(s => !deletedNames.has(s.name)).map(s => ({ ...s }))
         for (const row of rows) {
+          if (row.Location === 'Deleted') continue
           const item = next.find(s => s.name === row.Product)
           if (!item) continue
           const qty = Number(row.Qty) || 0
@@ -164,6 +169,20 @@ export default function Inventory() {
     setLastSynced(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }))
     if (!silent) showToast(rows.length > 0 ? `✓ Synced ${rows.length} entries from Google Sheet` : 'No Sheet data found — showing local stock')
   }, [])
+
+  const handleDeleteProduct = async (s: StockItem) => {
+    if (!confirm(`Delete "${s.name}" from the stock catalog entirely? This can't be undone.`)) return
+    setDeletingProduct(s.sl)
+    const result = await addRow('Stock', { Product: s.name, Location: 'Deleted', Qty: 0, Notes: 'Product removed from catalog', 'Updated By': 'Dashboard', Date: new Date().toLocaleDateString('en-IN') })
+    if (result?.status === 'ok') {
+      setStock(prev => prev.filter(x => x.sl !== s.sl))
+      showToast(`✓ "${s.name}" removed from catalog`)
+      syncFromSheet(true)
+    } else {
+      showToast(`✗ Failed to delete: ${result?.error || 'unknown error'}`)
+    }
+    setDeletingProduct(null)
+  }
 
   const handleDeleteEntry = async (entry: StockLogEntry) => {
     if (!confirm(`Delete this stock entry — "${entry.Product}" (${entry.Location}, ${entry.Qty})? This can't be undone.`)) return
@@ -377,6 +396,7 @@ export default function Inventory() {
                     <th className="text-center">Status</th>
                     <th className="text-center">Transfer</th>
                     <th className="text-center">Edit</th>
+                    <th className="text-center">Delete</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -406,6 +426,12 @@ export default function Inventory() {
                           <button onClick={() => openEdit(s)}
                             className="p-1.5 rounded-lg transition-colors hover:bg-brand-50 text-brand" title="Edit product">
                             <Pencil size={13}/>
+                          </button>
+                        </td>
+                        <td className="text-center">
+                          <button onClick={() => handleDeleteProduct(s)} disabled={deletingProduct === s.sl}
+                            className="p-1.5 rounded-lg transition-colors hover:bg-red-50 text-red-500 disabled:opacity-40" title="Delete product">
+                            <Trash2 size={13}/>
                           </button>
                         </td>
                       </tr>

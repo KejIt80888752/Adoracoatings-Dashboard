@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Plus, Trash2, CheckCheck, FileText, List, FileSignature } from 'lucide-react'
 import { fetchSheet, addRow, deleteRow } from '../lib/api'
 
@@ -284,7 +285,7 @@ function WorkOrderModal({ quote: q, onClose }: { quote: QuoteRow & { rowIndex: n
     </div>
   )
 
-  return (
+  return createPortal(
     <div className="print-modal-overlay fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto print:bg-white print:p-0 print:block">
       <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl my-8 print:shadow-none print:rounded-none print:my-0 print:max-w-none" id="work-order-print-area">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 print:hidden">
@@ -420,7 +421,8 @@ function WorkOrderModal({ quote: q, onClose }: { quote: QuoteRow & { rowIndex: n
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.getElementById('print-root')!
   )
 }
 

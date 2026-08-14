@@ -2,22 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Print: only the Work Order document, none of the app chrome ────── */
-/* The modal overlay is `position: fixed` on screen; if left fixed for print,
-   Chrome repeats it on every page once content overflows one sheet, which
-   looks like the document printing twice. Force it to flow statically. */
+/* ── Print: only the Work Order / Invoice / Challan document ─────────── */
+/* The print modal is portalled into #print-root, a sibling of #root outside
+   the whole app tree. Hiding #root with display:none (not visibility) removes
+   it from layout entirely, so nothing above the document reserves blank space
+   on the page and #print-root simply starts at the top and flows across as
+   many pages as the content needs. */
 @media print {
-  body * { visibility: hidden; }
-  #work-order-print-area, #work-order-print-area * { visibility: visible; }
+  #root { display: none !important; }
+  /* position:fixed elements repeat on every printed page in Chrome once
+     content overflows one sheet -- force the overlay to flow statically. */
   .print-modal-overlay { position: static !important; inset: auto !important; overflow: visible !important; height: auto !important; }
   #work-order-print-area { position: static !important; width: 100%; margin: 0; box-shadow: none; }
-  /* The app shell (DashboardLayout) clips its content to the viewport height
-     on screen (h-screen + overflow-hidden/overflow-y-auto), which now also
-     clips the print area since it's a static descendant during print. Relax
-     those constraints so the full document can flow onto as many pages as
-     it needs instead of being cut off after one screen's worth of height. */
-  .h-screen { height: auto !important; }
-  .overflow-hidden, .overflow-y-auto { overflow: visible !important; }
 }
 
 /* ── Light / Dark CSS Variables ─────────────────────────────── */

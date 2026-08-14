@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Plus, Trash2, Save, FileText, FileSpreadsheet, List, Truck, CheckCheck } from 'lucide-react'
 import { fetchSheet, addRow, deleteRow } from '../lib/api'
 
@@ -291,7 +292,7 @@ function InvoiceForm({ docType, onSaved, showToast }: { docType: DocType; onSave
 
 function InvoicePrintModal({ data, onClose }: { data: any; onClose: () => void }) {
   const d = data
-  return (
+  return createPortal(
     <div className="print-modal-overlay fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto print:bg-white print:p-0 print:block">
       <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl my-8 print:shadow-none print:rounded-none print:my-0 print:max-w-none" id="work-order-print-area">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 print:hidden">
@@ -366,7 +367,8 @@ function InvoicePrintModal({ data, onClose }: { data: any; onClose: () => void }
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.getElementById('print-root')!
   )
 }
 
@@ -533,7 +535,7 @@ function ChallanForm({ onSaved, showToast }: { onSaved: () => void; showToast: (
 }
 
 function ChallanPrintModal({ data: d, onClose }: { data: any; onClose: () => void }) {
-  return (
+  return createPortal(
     <div className="print-modal-overlay fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto print:bg-white print:p-0 print:block">
       <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl my-8 print:shadow-none print:rounded-none print:my-0 print:max-w-none" id="work-order-print-area">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 print:hidden">
@@ -609,13 +611,18 @@ function ChallanPrintModal({ data: d, onClose }: { data: any; onClose: () => voi
           <p className="font-bold text-brand mb-1">DECLARATION:</p>
           <p className="mb-8">This sample(s) is the property of Adora Coatings. Photography of the sample is not allowed. The samples are required to be duly returned in the same condition as received.</p>
 
-          <div className="flex justify-between gap-8">
-            <div className="flex-1 border-t border-gray-400 pt-2">SIGNATURE: RECIPIENT<br/><br/>DATE: _______________</div>
-            <div className="flex-1 border-t border-gray-400 pt-2">SIGNATURE: ADORA COATINGS<br/><br/>DATE: _______________</div>
-          </div>
+          <table className="w-full border-collapse">
+            <tbody>
+              <tr>
+                <td className="border-t border-gray-400 pt-2 pr-4 w-1/2">SIGNATURE: RECIPIENT<br/><br/>DATE: _______________</td>
+                <td className="border-t border-gray-400 pt-2 w-1/2">SIGNATURE: ADORA COATINGS<br/><br/>DATE: _______________</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
-    </div>
+    </div>,
+    document.getElementById('print-root')!
   )
 }
 

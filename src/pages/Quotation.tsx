@@ -299,65 +299,77 @@ function WorkOrderModal({ quote: q, onClose }: { quote: QuoteRow & { rowIndex: n
           <img src={`${import.meta.env.BASE_URL}adora-logo.png`} alt="Adora Coatings" className="h-16 mb-2" />
           <p className="text-xs text-gray-500 mb-4">GST NO: 29AHDPA4964B1ZN &nbsp;|&nbsp; 175/1, Pavilion Rd, Jaya Nagar 1st Block, Bengaluru 560011</p>
 
-          {/* Boxed grid, matching the bordered layout of the source Excel sheet */}
-          <div className="border border-gray-400 mb-6">
-            <div className="grid grid-cols-2 text-xs divide-x divide-gray-400 border-b border-gray-400">
-              <div className="p-2 space-y-0.5">
-                <p><b>Quotation No:</b> {q['Quote No']}</p>
-                <p><b>Date:</b> {q.Date}</p>
-                <p><b>Handled By:</b> {q['Handled By'] || '—'}</p>
-                <p><b>Enquired By / Reference:</b> {q['Enquired By'] || '—'}</p>
-              </div>
-              <div className="p-2 space-y-0.5">
-                <p><b>Client Name:</b> {q['Client Name']}</p>
-                <p><b>Address:</b> {q['Client Address'] || '—'}</p>
-              </div>
-            </div>
-
-            <table className="w-full text-xs border-collapse">
-              <thead>
-                <tr className="bg-gray-50">
-                  {['SL','Particulars','Texture','Length','Height','Nos','Co-eff','Area (SFT)','Rate','Amount'].map(h => (
-                    <th key={h} className="border-b border-r last:border-r-0 border-gray-400 px-2 py-1.5 text-left">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((it, i) => (
-                  <tr key={i}>
-                    <td className="border-b border-r border-gray-400 px-2 py-1.5">{i + 1}</td>
-                    <td className="border-b border-r border-gray-400 px-2 py-1.5">{it.particulars}</td>
-                    <td className="border-b border-r border-gray-400 px-2 py-1.5">{it.texture}</td>
-                    <td className="border-b border-r border-gray-400 px-2 py-1.5 text-right">{it.length || 0}</td>
-                    <td className="border-b border-r border-gray-400 px-2 py-1.5 text-right">{it.height || 0}</td>
-                    <td className="border-b border-r border-gray-400 px-2 py-1.5 text-right">{it.nos || 0}</td>
-                    <td className="border-b border-r border-gray-400 px-2 py-1.5 text-right">{it.coefficient || 0}</td>
-                    <td className="border-b border-r border-gray-400 px-2 py-1.5 text-right">{(it.area ?? area(it)).toLocaleString('en-IN')}</td>
-                    <td className="border-b border-r border-gray-400 px-2 py-1.5 text-right">{(it.rate || 0).toLocaleString('en-IN')}</td>
-                    <td className="border-b border-gray-400 px-2 py-1.5 text-right">{fmt(it.amount ?? amount(it))}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <div className="flex justify-end text-xs border-b border-gray-400">
-              <div className="w-64 divide-y divide-gray-400 border-l border-gray-400">
-                <div className="flex justify-between px-2 py-1"><span>Total</span><span>{fmt(Number(q.Total) || 0)}</span></div>
-                <div className="flex justify-between px-2 py-1"><span>GST Additional @ 18%</span><span>{fmt(Number(q.GST) || 0)}</span></div>
-                <div className="flex justify-between px-2 py-1 font-bold text-brand"><span>Grand Total</span><span>{fmt(Number(q['Grand Total']) || 0)}</span></div>
-              </div>
-            </div>
-
-            <div className="px-2 py-2 text-xs bg-yellow-50 border-b border-gray-400">
-              <b>PLEASE NOTE:</b> The validity of this quotation is 4 days. Rates will vary as per the colour shade — exact rates shall be quoted once the colours are decided.
-            </div>
-
-            <div className="grid grid-cols-3 text-xs divide-x divide-gray-400 whitespace-pre-line">
-              <div className="p-2"><b>BANK DETAILS:</b><br/>{BANK_DETAILS}</div>
-              <div className="p-2"><b>ADDRESS:</b><br/>{COMPANY_ADDRESS}</div>
-              <div className="p-2"><b>PAYMENT TERMS:</b><br/>{PAYMENT_TERMS}</div>
-            </div>
-          </div>
+          {/* Boxed grid, matching the bordered layout of the source Excel sheet.
+              Built entirely from <table> elements (not flex/grid) because Chrome's
+              print engine treats flex/grid boxes as unbreakable — one that doesn't
+              fit the remaining page gets pushed whole to the next page, leaving a
+              large blank gap. Tables fragment across pages cleanly instead. */}
+          <table className="w-full text-xs border-collapse mb-6">
+            <tbody>
+              <tr>
+                <td className="border border-gray-400 p-2 align-top w-1/2">
+                  <p><b>Quotation No:</b> {q['Quote No']}</p>
+                  <p><b>Date:</b> {q.Date}</p>
+                  <p><b>Handled By:</b> {q['Handled By'] || '—'}</p>
+                  <p><b>Enquired By / Reference:</b> {q['Enquired By'] || '—'}</p>
+                </td>
+                <td className="border border-gray-400 p-2 align-top w-1/2">
+                  <p><b>Client Name:</b> {q['Client Name']}</p>
+                  <p><b>Address:</b> {q['Client Address'] || '—'}</p>
+                </td>
+              </tr>
+              <tr>
+                <td colSpan={2} className="p-0">
+                  <table className="w-full text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        {['SL','Particulars','Texture','Length','Height','Nos','Co-eff','Area (SFT)','Rate','Amount'].map(h => (
+                          <th key={h} className="border-x border-gray-400 px-2 py-1.5 text-left">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((it, i) => (
+                        <tr key={i}>
+                          <td className="border-x border-gray-400 px-2 py-1.5">{i + 1}</td>
+                          <td className="border-x border-gray-400 px-2 py-1.5">{it.particulars}</td>
+                          <td className="border-x border-gray-400 px-2 py-1.5">{it.texture}</td>
+                          <td className="border-x border-gray-400 px-2 py-1.5 text-right">{it.length || 0}</td>
+                          <td className="border-x border-gray-400 px-2 py-1.5 text-right">{it.height || 0}</td>
+                          <td className="border-x border-gray-400 px-2 py-1.5 text-right">{it.nos || 0}</td>
+                          <td className="border-x border-gray-400 px-2 py-1.5 text-right">{it.coefficient || 0}</td>
+                          <td className="border-x border-gray-400 px-2 py-1.5 text-right">{(it.area ?? area(it)).toLocaleString('en-IN')}</td>
+                          <td className="border-x border-gray-400 px-2 py-1.5 text-right">{(it.rate || 0).toLocaleString('en-IN')}</td>
+                          <td className="border-x border-gray-400 px-2 py-1.5 text-right">{fmt(it.amount ?? amount(it))}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td colSpan={2} className="border-x border-b border-gray-400 p-0">
+                  <table className="w-full text-xs border-collapse">
+                    <tbody>
+                      <tr><td className="px-2 py-1 text-right" colSpan={2}>Total &nbsp; {fmt(Number(q.Total) || 0)}</td></tr>
+                      <tr><td className="px-2 py-1 text-right" colSpan={2}>GST Additional @ 18% &nbsp; {fmt(Number(q.GST) || 0)}</td></tr>
+                      <tr><td className="px-2 py-1 text-right font-bold text-brand border-t border-gray-400" colSpan={2}>Grand Total &nbsp; {fmt(Number(q['Grand Total']) || 0)}</td></tr>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td colSpan={2} className="border-x border-b border-gray-400 p-2 bg-yellow-50">
+                  <b>PLEASE NOTE:</b> The validity of this quotation is 4 days. Rates will vary as per the colour shade — exact rates shall be quoted once the colours are decided.
+                </td>
+              </tr>
+              <tr className="whitespace-pre-line">
+                <td className="border-x border-b border-gray-400 p-2 align-top w-1/3"><b>BANK DETAILS:</b><br/>{BANK_DETAILS}</td>
+                <td className="border-x border-b border-gray-400 p-2 align-top w-1/3"><b>ADDRESS:</b><br/>{COMPANY_ADDRESS}</td>
+                <td className="border-x border-b border-gray-400 p-2 align-top w-1/3"><b>PAYMENT TERMS:</b><br/>{PAYMENT_TERMS}</td>
+              </tr>
+            </tbody>
+          </table>
 
           {isMicrolite ? (
             <>
@@ -397,10 +409,14 @@ function WorkOrderModal({ quote: q, onClose }: { quote: QuoteRow & { rowIndex: n
               )}
               <p>Thanking you,<br/>Yours sincerely,</p>
             </div>
-            <div className="flex justify-between text-xs border-t border-gray-400 divide-x divide-gray-400">
-              <div className="flex-1 p-3 text-center">Signature: ADORA COATINGS<br/><br/>Date: _______________</div>
-              <div className="flex-1 p-3 text-center">Signature: CLIENT / CUSTOMER<br/><br/>Date: _______________</div>
-            </div>
+            <table className="w-full text-xs border-collapse border-t border-gray-400">
+              <tbody>
+                <tr>
+                  <td className="border-r border-gray-400 p-3 text-center w-1/2">Signature: ADORA COATINGS<br/><br/>Date: _______________</td>
+                  <td className="p-3 text-center w-1/2">Signature: CLIENT / CUSTOMER<br/><br/>Date: _______________</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

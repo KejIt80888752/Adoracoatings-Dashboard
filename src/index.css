@@ -11,6 +11,13 @@
   #work-order-print-area, #work-order-print-area * { visibility: visible; }
   .print-modal-overlay { position: static !important; inset: auto !important; overflow: visible !important; height: auto !important; }
   #work-order-print-area { position: static !important; width: 100%; margin: 0; box-shadow: none; }
+  /* The app shell (DashboardLayout) clips its content to the viewport height
+     on screen (h-screen + overflow-hidden/overflow-y-auto), which now also
+     clips the print area since it's a static descendant during print. Relax
+     those constraints so the full document can flow onto as many pages as
+     it needs instead of being cut off after one screen's worth of height. */
+  .h-screen { height: auto !important; }
+  .overflow-hidden, .overflow-y-auto { overflow: visible !important; }
 }
 
 /* ── Light / Dark CSS Variables ─────────────────────────────── */

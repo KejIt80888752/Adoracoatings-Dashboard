@@ -3,10 +3,14 @@
 @tailwind utilities;
 
 /* ── Print: only the Work Order document, none of the app chrome ────── */
+/* The modal overlay is `position: fixed` on screen; if left fixed for print,
+   Chrome repeats it on every page once content overflows one sheet, which
+   looks like the document printing twice. Force it to flow statically. */
 @media print {
   body * { visibility: hidden; }
   #work-order-print-area, #work-order-print-area * { visibility: visible; }
-  #work-order-print-area { position: absolute; top: 0; left: 0; width: 100%; margin: 0; box-shadow: none; }
+  .print-modal-overlay { position: static !important; inset: auto !important; overflow: visible !important; height: auto !important; }
+  #work-order-print-area { position: static !important; width: 100%; margin: 0; box-shadow: none; }
 }
 
 /* ── Light / Dark CSS Variables ─────────────────────────────── */

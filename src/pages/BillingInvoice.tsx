@@ -292,7 +292,7 @@ function InvoiceForm({ docType, onSaved, showToast }: { docType: DocType; onSave
 function InvoicePrintModal({ data, onClose }: { data: any; onClose: () => void }) {
   const d = data
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto print:bg-white print:p-0 print:block">
+    <div className="print-modal-overlay fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto print:bg-white print:p-0 print:block">
       <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl my-8 print:shadow-none print:rounded-none print:my-0 print:max-w-none" id="work-order-print-area">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 print:hidden">
           <h2 className="font-semibold text-gray-800">{d.docType} — {d.invNo}</h2>
@@ -534,7 +534,7 @@ function ChallanForm({ onSaved, showToast }: { onSaved: () => void; showToast: (
 
 function ChallanPrintModal({ data: d, onClose }: { data: any; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto print:bg-white print:p-0 print:block">
+    <div className="print-modal-overlay fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto print:bg-white print:p-0 print:block">
       <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl my-8 print:shadow-none print:rounded-none print:my-0 print:max-w-none" id="work-order-print-area">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 print:hidden">
           <h2 className="font-semibold text-gray-800">Delivery Challan — {d.challanNo}</h2>

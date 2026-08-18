@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, Trash2, Save, FileText, FileSpreadsheet, List, Truck, CheckCheck } from 'lucide-react'
+import { Plus, Trash2, Save, FileText, FileSpreadsheet, List, Truck, CheckCheck, Mail } from 'lucide-react'
 import { fetchSheet, addRow, deleteRow } from '../lib/api'
 
 type Item = { id: number; particulars: string; qty: number; unit: string; rate: number }
@@ -71,12 +71,13 @@ const fmt = (n: number) => '₹' + n.toLocaleString('en-IN')
 
 type InvoiceRow = {
   'Doc Type': string; 'Invoice No': string; Date: string; State: string; Party: string; GSTIN: string
-  'Billing Address': string; 'Delivery Address': string; Items: string
+  'Billing Address': string; 'Delivery Address': string; 'Client Phone': string; 'Client Email': string; Items: string
   'Sub Total': string; CGST: string; SGST: string; IGST: string; 'Grand Total': string
   'Advance Paid': string; 'Total Due': string; Status: string
 }
 type ChallanRow = {
   'Challan No': string; Date: string; 'Client / Project Name': string; 'Delivery Address & Contact': string
+  'Client Phone': string; 'Client Email': string
   Samples: string; 'Notes / Remarks': string; Status: string
 }
 
@@ -92,6 +93,8 @@ function InvoiceForm({ docType, onSaved, showToast }: { docType: DocType; onSave
   const [gstin, setGstin]   = useState('')
   const [billAddr, setBillAddr] = useState('')
   const [delAddr, setDelAddr]   = useState('')
+  const [clientPhone, setClientPhone] = useState('')
+  const [clientEmail, setClientEmail] = useState('')
   const [items, setItems]   = useState<Item[]>([newItem(1)])
   const [nextId, setNextId] = useState(2)
   const [advancePaid, setAdvancePaid] = useState(0)
@@ -125,6 +128,8 @@ function InvoiceForm({ docType, onSaved, showToast }: { docType: DocType; onSave
       GSTIN: gstin,
       'Billing Address': billAddr,
       'Delivery Address': delAddr,
+      'Client Phone': clientPhone,
+      'Client Email': clientEmail,
       Items: JSON.stringify(items.map(i => ({ ...i, amount: amount(i) }))),
       'Sub Total': subTotal.toFixed(2),
       CGST: cgst.toFixed(2),
@@ -183,6 +188,16 @@ function InvoiceForm({ docType, onSaved, showToast }: { docType: DocType; onSave
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Delivery Address</label>
             <input value={delAddr} onChange={e => setDelAddr(e.target.value)} placeholder="Same as billing / site address" className="input-dark" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Client Phone</label>
+            <input value={clientPhone} onChange={e => setClientPhone(e.target.value)} placeholder="10-digit mobile number" className="input-dark" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Client Email</label>
+            <input type="email" value={clientEmail} onChange={e => setClientEmail(e.target.value)} placeholder="client@example.com" className="input-dark" />
           </div>
         </div>
       </div>
@@ -386,6 +401,8 @@ function ChallanForm({ onSaved, showToast }: { onSaved: () => void; showToast: (
   const [challanDate, setChallanDate] = useState(today)
   const [clientProject, setClientProject] = useState('')
   const [deliveryAddr, setDeliveryAddr]   = useState('')
+  const [clientPhone, setClientPhone]     = useState('')
+  const [clientEmail, setClientEmail]     = useState('')
   const [deliveryMode, setDeliveryMode]   = useState('')
   const [pickupPlace, setPickupPlace]     = useState('')
   const [returnMode, setReturnMode]       = useState('')
@@ -418,6 +435,8 @@ function ChallanForm({ onSaved, showToast }: { onSaved: () => void; showToast: (
       Date: challanDate,
       'Client / Project Name': clientProject,
       'Delivery Address & Contact': deliveryAddr,
+      'Client Phone': clientPhone,
+      'Client Email': clientEmail,
       Samples: JSON.stringify(samples),
       'Notes / Remarks': notes,
       Status: 'Out',
@@ -447,6 +466,16 @@ function ChallanForm({ onSaved, showToast }: { onSaved: () => void; showToast: (
         <div>
           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Delivery Address & Contact Person</label>
           <input value={deliveryAddr} onChange={e => setDeliveryAddr(e.target.value)} placeholder="Address and contact person at site" className="input-dark" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Client Phone</label>
+            <input value={clientPhone} onChange={e => setClientPhone(e.target.value)} placeholder="10-digit mobile number" className="input-dark" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Client Email</label>
+            <input type="email" value={clientEmail} onChange={e => setClientEmail(e.target.value)} placeholder="client@example.com" className="input-dark" />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-6 pt-2">
@@ -665,6 +694,19 @@ function InvoiceList({ onNew }: { onNew: () => void }) {
     else showToast(`✗ Failed: ${result?.error || 'unknown error'}`)
   }
 
+  const emailInvoice = (r: InvoiceRow) => {
+    if (!r['Client Email']) { showToast('✗ No email saved for this client — add one when creating the invoice'); return }
+    const subject = `${r['Doc Type']} ${r['Invoice No']} from Adora Coatings`
+    const body = `Dear ${r.Party},\n\nPlease find your ${r['Doc Type']} details below.\n\n${r['Doc Type']} No: ${r['Invoice No']}\nDate: ${r.Date}\nGrand Total: ${fmt(Number(r['Grand Total']) || 0)}\n\nThank you,\nAdora Coatings`
+    window.location.href = `mailto:${r['Client Email']}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  }
+  const emailChallan = (r: ChallanRow) => {
+    if (!r['Client Email']) { showToast('✗ No email saved for this client — add one when creating the challan'); return }
+    const subject = `Delivery Challan ${r['Challan No']} from Adora Coatings`
+    const body = `Dear Sir/Madam,\n\nPlease find your delivery challan details below.\n\nChallan No: ${r['Challan No']}\nDate: ${r.Date}\nClient / Project: ${r['Client / Project Name']}\n\nThank you,\nAdora Coatings`
+    window.location.href = `mailto:${r['Client Email']}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -676,10 +718,10 @@ function InvoiceList({ onNew }: { onNew: () => void }) {
         <div className="px-5 py-3 border-b border-gray-100 font-semibold text-sm text-gray-700">Invoices</div>
         <div className="overflow-auto max-h-[50vh]">
           <table className="tbl w-full">
-            <thead><tr><th>Type</th><th>Invoice #</th><th>Party</th><th>Date</th><th className="text-right">Amount</th><th>Status</th><th>Delete</th></tr></thead>
+            <thead><tr><th>Type</th><th>Invoice #</th><th>Party</th><th>Date</th><th className="text-right">Amount</th><th>Status</th><th>Email</th><th>Delete</th></tr></thead>
             <tbody>
-              {loading && <tr><td colSpan={7} className="text-center py-8 text-gray-400">Loading…</td></tr>}
-              {!loading && invoices.length === 0 && <tr><td colSpan={7} className="text-center py-8 text-gray-400">No invoices saved yet</td></tr>}
+              {loading && <tr><td colSpan={8} className="text-center py-8 text-gray-400">Loading…</td></tr>}
+              {!loading && invoices.length === 0 && <tr><td colSpan={8} className="text-center py-8 text-gray-400">No invoices saved yet</td></tr>}
               {invoices.map(r => (
                 <tr key={r.rowIndex}>
                   <td className="text-xs">{r['Doc Type']}</td>
@@ -688,6 +730,10 @@ function InvoiceList({ onNew }: { onNew: () => void }) {
                   <td className="text-gray-500 text-xs">{r.Date}</td>
                   <td className="text-right font-semibold text-gray-700">{fmt(Number(r['Grand Total']) || 0)}</td>
                   <td><span className={r.Status === 'Paid' ? 'badge-green' : r.Status === 'Draft' ? 'badge-gray' : 'badge-yellow'}>{r.Status}</span></td>
+                  <td>
+                    <button onClick={() => emailInvoice(r)}
+                      className="p-1.5 rounded-lg transition-colors hover:bg-brand/10 text-brand" title={r['Client Email'] ? `Email ${r['Client Email']}` : 'No email saved for this client'}><Mail size={13}/></button>
+                  </td>
                   <td>
                     <button onClick={() => delInvoice(r)} disabled={deletingRow === 'inv-' + r.rowIndex}
                       className="p-1.5 rounded-lg transition-colors hover:bg-red-50 text-red-500 disabled:opacity-40"><Trash2 size={13}/></button>
@@ -703,16 +749,20 @@ function InvoiceList({ onNew }: { onNew: () => void }) {
         <div className="px-5 py-3 border-b border-gray-100 font-semibold text-sm text-gray-700">Delivery Challans</div>
         <div className="overflow-auto max-h-[50vh]">
           <table className="tbl w-full">
-            <thead><tr><th>Challan #</th><th>Client / Project</th><th>Date</th><th>Status</th><th>Delete</th></tr></thead>
+            <thead><tr><th>Challan #</th><th>Client / Project</th><th>Date</th><th>Status</th><th>Email</th><th>Delete</th></tr></thead>
             <tbody>
-              {loading && <tr><td colSpan={5} className="text-center py-8 text-gray-400">Loading…</td></tr>}
-              {!loading && challans.length === 0 && <tr><td colSpan={5} className="text-center py-8 text-gray-400">No challans saved yet</td></tr>}
+              {loading && <tr><td colSpan={6} className="text-center py-8 text-gray-400">Loading…</td></tr>}
+              {!loading && challans.length === 0 && <tr><td colSpan={6} className="text-center py-8 text-gray-400">No challans saved yet</td></tr>}
               {challans.map(r => (
                 <tr key={r.rowIndex}>
                   <td className="font-mono text-xs text-brand">{r['Challan No']}</td>
                   <td className="font-medium text-gray-700">{r['Client / Project Name']}</td>
                   <td className="text-gray-500 text-xs">{r.Date}</td>
                   <td><span className="badge-blue">{r.Status}</span></td>
+                  <td>
+                    <button onClick={() => emailChallan(r)}
+                      className="p-1.5 rounded-lg transition-colors hover:bg-brand/10 text-brand" title={r['Client Email'] ? `Email ${r['Client Email']}` : 'No email saved for this client'}><Mail size={13}/></button>
+                  </td>
                   <td>
                     <button onClick={() => delChallan(r)} disabled={deletingRow === 'ch-' + r.rowIndex}
                       className="p-1.5 rounded-lg transition-colors hover:bg-red-50 text-red-500 disabled:opacity-40"><Trash2 size={13}/></button>

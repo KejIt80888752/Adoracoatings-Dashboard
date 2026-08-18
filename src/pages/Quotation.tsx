@@ -6,7 +6,7 @@ import { fetchSheet, addRow, deleteRow } from '../lib/api'
 const fmt = (n: number) => '₹' + n.toLocaleString('en-IN')
 
 type Item = { id: number; particulars: string; texture: string; length: number; height: number; nos: number; coefficient: number; rate: number }
-type QuoteRow = { 'Quote No': string; Date: string; 'Client Name': string; 'Client Address': string; 'Client Phone': string; 'Client Email': string; 'Handled By': string; 'Enquired By': string; 'Finish Type': string; Items: string; Total: string; GST: string; 'Grand Total': string; Status: string }
+type QuoteRow = { 'Quote No': string; Date: string; 'Client Name': string; 'Client Address': string; 'Client Phone': string; 'Client Email': string; 'Handled By': string; 'Enquired By': string; 'Finish Type': string; Items: string; Total: string; GST: string; 'Grand Total': string; Status: string; Notes: string }
 
 const FINISH_TYPES = ['ACRALIYC', 'MICROLITE'] as const
 type FinishType = typeof FINISH_TYPES[number]
@@ -411,6 +411,13 @@ function WorkOrderModal({ quote: q, onClose, onEdit }: { quote: QuoteRow & { row
                   <b>PLEASE NOTE:</b> The validity of this quotation is 4 days. Rates will vary as per the colour shade — exact rates shall be quoted once the colours are decided.
                 </td>
               </tr>
+              {q.Notes && (
+                <tr>
+                  <td colSpan={2} className="border-x border-b border-gray-400 p-2 whitespace-pre-line">
+                    <b>NOTES / REMARKS:</b> {q.Notes}
+                  </td>
+                </tr>
+              )}
               <tr className="whitespace-pre-line">
                 <td className="border-x border-b border-gray-400 p-2 align-top w-1/3"><b>BANK DETAILS:</b><br/>{BANK_DETAILS}</td>
                 <td className="border-x border-b border-gray-400 p-2 align-top w-1/3"><b>ADDRESS:</b><br/>{COMPANY_ADDRESS}</td>
@@ -482,6 +489,7 @@ function CreateQuotation({ existingQuotes, editing, onSaved, showToast }: { exis
   const [clientAddr, setClientAddr] = useState(editing ? editing['Client Address'] : 'Bangalore')
   const [clientPhone, setClientPhone] = useState(editing ? editing['Client Phone'] : '')
   const [clientEmail, setClientEmail] = useState(editing ? editing['Client Email'] : '')
+  const [notes, setNotes] = useState(editing ? editing.Notes || '' : '')
   const [handledBy, setHandledBy]   = useState(editing ? editing['Handled By'] : '')
   const [enquiredBy, setEnquiredBy] = useState(editing ? editing['Enquired By'] : '')
   const [finishType, setFinishType] = useState<FinishType>((editing?.['Finish Type'] as FinishType) || 'ACRALIYC')
@@ -526,6 +534,7 @@ function CreateQuotation({ existingQuotes, editing, onSaved, showToast }: { exis
       GST: gst.toFixed(2),
       'Grand Total': grandTotal.toFixed(2),
       Status: editing?.Status || 'In Progress',
+      Notes: notes,
     })
     setSaving(false)
     if (result?.status === 'ok') { showToast(`✓ ${quoteNo} ${editing ? 'updated' : 'saved'} for ${clientName}`); onSaved() }
@@ -589,6 +598,10 @@ function CreateQuotation({ existingQuotes, editing, onSaved, showToast }: { exis
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Client Email</label>
             <input type="email" value={clientEmail} onChange={e => setClientEmail(e.target.value)} placeholder="client@example.com" className="input-dark" />
           </div>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Additional Notes / Remarks</label>
+          <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="Anything specific to this quotation — prints on the Work Order below Please Note" className="input-dark w-full" />
         </div>
       </div>
 
@@ -670,7 +683,7 @@ function CreateQuotation({ existingQuotes, editing, onSaved, showToast }: { exis
       </div>
 
       <div className="flex items-center justify-between py-2">
-        <button onClick={() => { setItems([newItem(1)]); setNextId(2); setClientName(''); setClientPhone(''); setClientEmail(''); setHandledBy(''); setEnquiredBy(''); setFinishType('ACRALIYC') }}
+        <button onClick={() => { setItems([newItem(1)]); setNextId(2); setClientName(''); setClientPhone(''); setClientEmail(''); setNotes(''); setHandledBy(''); setEnquiredBy(''); setFinishType('ACRALIYC') }}
           className="btn-ghost text-sm">Clear</button>
         <button disabled={!clientName || saving} onClick={handleSave} className="btn-gold flex items-center gap-1.5 text-sm disabled:opacity-50">
           {saving ? 'Saving...' : editing ? 'Update Quotation' : 'Save Quotation → Sheet'}

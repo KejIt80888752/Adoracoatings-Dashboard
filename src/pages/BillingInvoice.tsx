@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, Trash2, Save, FileText, FileSpreadsheet, List, Truck, CheckCheck, Mail } from 'lucide-react'
+import { Plus, Trash2, Save, FileText, FileSpreadsheet, List, Truck, CheckCheck, Mail, MessageCircle } from 'lucide-react'
 import { fetchSheet, addRow, deleteRow } from '../lib/api'
 
 type Item = { id: number; particulars: string; qty: number; unit: string; rate: number }
@@ -68,6 +68,12 @@ function numberToWords(num: number): string {
 }
 
 const fmt = (n: number) => '₹' + n.toLocaleString('en-IN')
+
+const waLink = (phone: string, text: string) => {
+  const digits = (phone || '').replace(/\D/g, '')
+  const withCountryCode = digits.length === 10 ? `91${digits}` : digits
+  return `https://wa.me/${withCountryCode}?text=${encodeURIComponent(text)}`
+}
 
 type InvoiceRow = {
   'Doc Type': string; 'Invoice No': string; Date: string; State: string; Party: string; GSTIN: string
@@ -707,6 +713,17 @@ function InvoiceList({ onNew }: { onNew: () => void }) {
     window.location.href = `mailto:${r['Client Email']}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
   }
 
+  const whatsappInvoice = (r: InvoiceRow) => {
+    if (!r['Client Phone']) { showToast('✗ No phone number saved for this client — add one when creating the invoice'); return }
+    const text = `Dear ${r.Party}, please find your ${r['Doc Type']} from Adora Coatings.\n\n${r['Doc Type']} No: ${r['Invoice No']}\nDate: ${r.Date}\nGrand Total: ${fmt(Number(r['Grand Total']) || 0)}\n\nThank you,\nAdora Coatings`
+    window.open(waLink(r['Client Phone'], text), '_blank')
+  }
+  const whatsappChallan = (r: ChallanRow) => {
+    if (!r['Client Phone']) { showToast('✗ No phone number saved for this client — add one when creating the challan'); return }
+    const text = `Please find your delivery challan from Adora Coatings.\n\nChallan No: ${r['Challan No']}\nDate: ${r.Date}\nClient / Project: ${r['Client / Project Name']}\n\nThank you,\nAdora Coatings`
+    window.open(waLink(r['Client Phone'], text), '_blank')
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -718,10 +735,10 @@ function InvoiceList({ onNew }: { onNew: () => void }) {
         <div className="px-5 py-3 border-b border-gray-100 font-semibold text-sm text-gray-700">Invoices</div>
         <div className="overflow-auto max-h-[50vh]">
           <table className="tbl w-full">
-            <thead><tr><th>Type</th><th>Invoice #</th><th>Party</th><th>Date</th><th className="text-right">Amount</th><th>Status</th><th>Email</th><th>Delete</th></tr></thead>
+            <thead><tr><th>Type</th><th>Invoice #</th><th>Party</th><th>Date</th><th className="text-right">Amount</th><th>Status</th><th>Email</th><th>WhatsApp</th><th>Delete</th></tr></thead>
             <tbody>
-              {loading && <tr><td colSpan={8} className="text-center py-8 text-gray-400">Loading…</td></tr>}
-              {!loading && invoices.length === 0 && <tr><td colSpan={8} className="text-center py-8 text-gray-400">No invoices saved yet</td></tr>}
+              {loading && <tr><td colSpan={9} className="text-center py-8 text-gray-400">Loading…</td></tr>}
+              {!loading && invoices.length === 0 && <tr><td colSpan={9} className="text-center py-8 text-gray-400">No invoices saved yet</td></tr>}
               {invoices.map(r => (
                 <tr key={r.rowIndex}>
                   <td className="text-xs">{r['Doc Type']}</td>
@@ -733,6 +750,10 @@ function InvoiceList({ onNew }: { onNew: () => void }) {
                   <td>
                     <button onClick={() => emailInvoice(r)}
                       className="p-1.5 rounded-lg transition-colors hover:bg-brand/10 text-brand" title={r['Client Email'] ? `Email ${r['Client Email']}` : 'No email saved for this client'}><Mail size={13}/></button>
+                  </td>
+                  <td>
+                    <button onClick={() => whatsappInvoice(r)}
+                      className="p-1.5 rounded-lg transition-colors hover:bg-green-50 text-green-600" title={r['Client Phone'] ? `WhatsApp ${r['Client Phone']}` : 'No phone number saved for this client'}><MessageCircle size={13}/></button>
                   </td>
                   <td>
                     <button onClick={() => delInvoice(r)} disabled={deletingRow === 'inv-' + r.rowIndex}
@@ -749,10 +770,10 @@ function InvoiceList({ onNew }: { onNew: () => void }) {
         <div className="px-5 py-3 border-b border-gray-100 font-semibold text-sm text-gray-700">Delivery Challans</div>
         <div className="overflow-auto max-h-[50vh]">
           <table className="tbl w-full">
-            <thead><tr><th>Challan #</th><th>Client / Project</th><th>Date</th><th>Status</th><th>Email</th><th>Delete</th></tr></thead>
+            <thead><tr><th>Challan #</th><th>Client / Project</th><th>Date</th><th>Status</th><th>Email</th><th>WhatsApp</th><th>Delete</th></tr></thead>
             <tbody>
-              {loading && <tr><td colSpan={6} className="text-center py-8 text-gray-400">Loading…</td></tr>}
-              {!loading && challans.length === 0 && <tr><td colSpan={6} className="text-center py-8 text-gray-400">No challans saved yet</td></tr>}
+              {loading && <tr><td colSpan={7} className="text-center py-8 text-gray-400">Loading…</td></tr>}
+              {!loading && challans.length === 0 && <tr><td colSpan={7} className="text-center py-8 text-gray-400">No challans saved yet</td></tr>}
               {challans.map(r => (
                 <tr key={r.rowIndex}>
                   <td className="font-mono text-xs text-brand">{r['Challan No']}</td>
@@ -762,6 +783,10 @@ function InvoiceList({ onNew }: { onNew: () => void }) {
                   <td>
                     <button onClick={() => emailChallan(r)}
                       className="p-1.5 rounded-lg transition-colors hover:bg-brand/10 text-brand" title={r['Client Email'] ? `Email ${r['Client Email']}` : 'No email saved for this client'}><Mail size={13}/></button>
+                  </td>
+                  <td>
+                    <button onClick={() => whatsappChallan(r)}
+                      className="p-1.5 rounded-lg transition-colors hover:bg-green-50 text-green-600" title={r['Client Phone'] ? `WhatsApp ${r['Client Phone']}` : 'No phone number saved for this client'}><MessageCircle size={13}/></button>
                   </td>
                   <td>
                     <button onClick={() => delChallan(r)} disabled={deletingRow === 'ch-' + r.rowIndex}

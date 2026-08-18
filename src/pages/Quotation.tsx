@@ -1,9 +1,18 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, Trash2, CheckCheck, FileText, List, FileSignature, Pencil, Mail } from 'lucide-react'
+import { Plus, Trash2, CheckCheck, FileText, List, FileSignature, Pencil, Mail, MessageCircle } from 'lucide-react'
 import { fetchSheet, addRow, deleteRow } from '../lib/api'
 
 const fmt = (n: number) => '₹' + n.toLocaleString('en-IN')
+
+// Builds a wa.me deep link with a pre-filled message. Indian 10-digit numbers
+// get the country code prefixed automatically; anything already prefixed or
+// non-Indian is passed through as-is (just stripped of non-digit characters).
+const waLink = (phone: string, text: string) => {
+  const digits = (phone || '').replace(/\D/g, '')
+  const withCountryCode = digits.length === 10 ? `91${digits}` : digits
+  return `https://wa.me/${withCountryCode}?text=${encodeURIComponent(text)}`
+}
 
 type Item = { id: number; particulars: string; texture: string; length: number; height: number; nos: number; coefficient: number; rate: number }
 type QuoteRow = { 'Quote No': string; Date: string; 'Client Name': string; 'Client Address': string; 'Client Phone': string; 'Client Email': string; 'Handled By': string; 'Enquired By': string; 'Finish Type': string; Items: string; Total: string; GST: string; 'Grand Total': string; Status: string; Notes: string }
@@ -158,6 +167,12 @@ export default function Quotation() {
     window.location.href = `mailto:${q['Client Email']}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
   }
 
+  const whatsappQuote = (q: QuoteRow & { rowIndex: number }) => {
+    if (!q['Client Phone']) { showToast('✗ No phone number saved for this client — edit the quotation to add one'); return }
+    const text = `Dear ${q['Client Name']}, please find your quotation from Adora Coatings.\n\nQuotation No: ${q['Quote No']}\nDate: ${q.Date}\nGrand Total: ${fmt(Number(q['Grand Total']) || 0)}\n\nThank you,\nAdora Coatings`
+    window.open(waLink(q['Client Phone'], text), '_blank')
+  }
+
   const filtered = quotes.filter(q =>
     (q['Client Name'] || '').toLowerCase().includes(search.toLowerCase()) ||
     (q['Quote No'] || '').toLowerCase().includes(search.toLowerCase())
@@ -226,15 +241,15 @@ export default function Quotation() {
                 <thead>
                   <tr>
                     <th>Quotation #</th><th>Client</th><th>Date</th>
-                    <th>Total</th><th>GST (18%)</th><th>Grand Total</th><th>Status</th><th>Work Order</th><th>Email</th><th>Edit</th><th>Delete</th>
+                    <th>Total</th><th>GST (18%)</th><th>Grand Total</th><th>Status</th><th>Work Order</th><th>Email</th><th>WhatsApp</th><th>Edit</th><th>Delete</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading && (
-                    <tr><td colSpan={11} className="text-center py-10 text-gray-400">Loading…</td></tr>
+                    <tr><td colSpan={12} className="text-center py-10 text-gray-400">Loading…</td></tr>
                   )}
                   {!loading && filtered.length === 0 && (
-                    <tr><td colSpan={11} className="text-center py-10 text-gray-400">{search ? 'No quotations match your search.' : 'No quotations yet.'}</td></tr>
+                    <tr><td colSpan={12} className="text-center py-10 text-gray-400">{search ? 'No quotations match your search.' : 'No quotations yet.'}</td></tr>
                   )}
                   {filtered.map(q => (
                     <tr key={q.rowIndex}>
@@ -255,6 +270,12 @@ export default function Quotation() {
                         <button onClick={() => emailQuote(q)}
                           className="p-1.5 rounded-lg transition-colors hover:bg-brand-50 text-brand" title={q['Client Email'] ? `Email ${q['Client Email']}` : 'No email saved for this client'}>
                           <Mail size={13}/>
+                        </button>
+                      </td>
+                      <td>
+                        <button onClick={() => whatsappQuote(q)}
+                          className="p-1.5 rounded-lg transition-colors hover:bg-green-50 text-green-600" title={q['Client Phone'] ? `WhatsApp ${q['Client Phone']}` : 'No phone number saved for this client'}>
+                          <MessageCircle size={13}/>
                         </button>
                       </td>
                       <td>
@@ -336,6 +357,16 @@ function WorkOrderModal({ quote: q, onClose, onEdit }: { quote: QuoteRow & { row
               title={q['Client Email'] ? `Email ${q['Client Email']}` : 'No email saved for this client'}
               className="btn-outline-gold text-sm flex items-center gap-1.5 disabled:opacity-40"
             ><Mail size={13}/> Email</button>
+            <button
+              onClick={() => {
+                if (!q['Client Phone']) return
+                const text = `Dear ${q['Client Name']}, please find your quotation from Adora Coatings.\n\nQuotation No: ${q['Quote No']}\nDate: ${q.Date}\nGrand Total: ${fmt(Number(q['Grand Total']) || 0)}\n\nThank you,\nAdora Coatings`
+                window.open(waLink(q['Client Phone'], text), '_blank')
+              }}
+              disabled={!q['Client Phone']}
+              title={q['Client Phone'] ? `WhatsApp ${q['Client Phone']}` : 'No phone number saved for this client'}
+              className="btn-outline-gold text-sm flex items-center gap-1.5 disabled:opacity-40"
+            ><MessageCircle size={13}/> WhatsApp</button>
             <button onClick={() => window.print()} className="btn-gold text-sm">Print</button>
             <button onClick={onClose} className="btn-outline-gold text-sm">Close</button>
           </div>

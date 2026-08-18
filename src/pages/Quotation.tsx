@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, Trash2, CheckCheck, FileText, List, FileSignature } from 'lucide-react'
+import { Plus, Trash2, CheckCheck, FileText, List, FileSignature, Pencil, Mail } from 'lucide-react'
 import { fetchSheet, addRow, deleteRow } from '../lib/api'
 
 const fmt = (n: number) => '₹' + n.toLocaleString('en-IN')
 
 type Item = { id: number; particulars: string; texture: string; length: number; height: number; nos: number; coefficient: number; rate: number }
-type QuoteRow = { 'Quote No': string; Date: string; 'Client Name': string; 'Client Address': string; 'Handled By': string; 'Enquired By': string; 'Finish Type': string; Items: string; Total: string; GST: string; 'Grand Total': string; Status: string }
+type QuoteRow = { 'Quote No': string; Date: string; 'Client Name': string; 'Client Address': string; 'Client Phone': string; 'Client Email': string; 'Handled By': string; 'Enquired By': string; 'Finish Type': string; Items: string; Total: string; GST: string; 'Grand Total': string; Status: string }
 
 const FINISH_TYPES = ['ACRALIYC', 'MICROLITE'] as const
 type FinishType = typeof FINISH_TYPES[number]
@@ -129,6 +129,7 @@ export default function Quotation() {
   const [toast, setToast]   = useState('')
   const [deletingRow, setDeletingRow] = useState<number | null>(null)
   const [workOrderQuote, setWorkOrderQuote] = useState<(QuoteRow & { rowIndex: number }) | null>(null)
+  const [editingQuote, setEditingQuote] = useState<(QuoteRow & { rowIndex: number }) | null>(null)
 
   const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(''), 3000) }
 
@@ -148,6 +149,13 @@ export default function Quotation() {
     setDeletingRow(null)
     if (result?.status === 'ok') { showToast(`✓ ${q['Quote No']} deleted`); loadQuotes() }
     else showToast(`✗ Failed to delete: ${result?.error || 'unknown error'}`)
+  }
+
+  const emailQuote = (q: QuoteRow & { rowIndex: number }) => {
+    if (!q['Client Email']) { showToast('✗ No email saved for this client — edit the quotation to add one'); return }
+    const subject = `Quotation ${q['Quote No']} from Adora Coatings`
+    const body = `Dear ${q['Client Name']},\n\nPlease find your quotation details below.\n\nQuotation No: ${q['Quote No']}\nDate: ${q.Date}\nGrand Total: ${fmt(Number(q['Grand Total']) || 0)}\n\nThank you,\nAdora Coatings`
+    window.location.href = `mailto:${q['Client Email']}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
   }
 
   const filtered = quotes.filter(q =>
@@ -171,7 +179,7 @@ export default function Quotation() {
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${tab==='list' ? 'bg-white text-brand shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
             <List size={14}/> Quotation List
           </button>
-          <button onClick={() => setTab('create')}
+          <button onClick={() => { setEditingQuote(null); setTab('create') }}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${tab==='create' ? 'bg-white text-brand shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
             <FileText size={14}/> New Quotation
           </button>
@@ -210,7 +218,7 @@ export default function Quotation() {
                   onChange={e => setSearch(e.target.value)}
                   className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-brand-200"
                 />
-                <button onClick={() => setTab('create')} className="btn-gold flex items-center gap-1.5 text-sm"><Plus size={13}/> New Quotation</button>
+                <button onClick={() => { setEditingQuote(null); setTab('create') }} className="btn-gold flex items-center gap-1.5 text-sm"><Plus size={13}/> New Quotation</button>
               </div>
             </div>
             <div className="overflow-auto max-h-[65vh]">
@@ -218,15 +226,15 @@ export default function Quotation() {
                 <thead>
                   <tr>
                     <th>Quotation #</th><th>Client</th><th>Date</th>
-                    <th>Total</th><th>GST (18%)</th><th>Grand Total</th><th>Status</th><th>Work Order</th><th>Delete</th>
+                    <th>Total</th><th>GST (18%)</th><th>Grand Total</th><th>Status</th><th>Work Order</th><th>Email</th><th>Edit</th><th>Delete</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading && (
-                    <tr><td colSpan={9} className="text-center py-10 text-gray-400">Loading…</td></tr>
+                    <tr><td colSpan={11} className="text-center py-10 text-gray-400">Loading…</td></tr>
                   )}
                   {!loading && filtered.length === 0 && (
-                    <tr><td colSpan={9} className="text-center py-10 text-gray-400">{search ? 'No quotations match your search.' : 'No quotations yet.'}</td></tr>
+                    <tr><td colSpan={11} className="text-center py-10 text-gray-400">{search ? 'No quotations match your search.' : 'No quotations yet.'}</td></tr>
                   )}
                   {filtered.map(q => (
                     <tr key={q.rowIndex}>
@@ -244,6 +252,18 @@ export default function Quotation() {
                         </button>
                       </td>
                       <td>
+                        <button onClick={() => emailQuote(q)}
+                          className="p-1.5 rounded-lg transition-colors hover:bg-brand-50 text-brand" title={q['Client Email'] ? `Email ${q['Client Email']}` : 'No email saved for this client'}>
+                          <Mail size={13}/>
+                        </button>
+                      </td>
+                      <td>
+                        <button onClick={() => { setEditingQuote(q); setTab('create') }}
+                          className="p-1.5 rounded-lg transition-colors hover:bg-brand-50 text-brand" title="Edit quotation">
+                          <Pencil size={13}/>
+                        </button>
+                      </td>
+                      <td>
                         <button onClick={() => handleDelete(q)} disabled={deletingRow === q.rowIndex}
                           className="p-1.5 rounded-lg transition-colors hover:bg-red-50 text-red-500 disabled:opacity-40" title="Delete quotation">
                           <Trash2 size={13}/>
@@ -258,9 +278,22 @@ export default function Quotation() {
         </>
       )}
 
-      {tab === 'create' && <CreateQuotation existingQuotes={quotes} onSaved={() => { setTab('list'); loadQuotes() }} showToast={showToast} />}
+      {tab === 'create' && (
+        <CreateQuotation
+          existingQuotes={quotes}
+          editing={editingQuote}
+          onSaved={() => { setTab('list'); setEditingQuote(null); loadQuotes() }}
+          showToast={showToast}
+        />
+      )}
 
-      {workOrderQuote && <WorkOrderModal quote={workOrderQuote} onClose={() => setWorkOrderQuote(null)} />}
+      {workOrderQuote && (
+        <WorkOrderModal
+          quote={workOrderQuote}
+          onClose={() => setWorkOrderQuote(null)}
+          onEdit={() => { setEditingQuote(workOrderQuote); setWorkOrderQuote(null); setTab('create') }}
+        />
+      )}
 
       {toast && (
         <div className="fixed top-4 right-4 z-[9999] bg-brand text-white text-sm px-4 py-3 rounded-xl shadow-lg flex items-center gap-2">
@@ -271,7 +304,7 @@ export default function Quotation() {
   )
 }
 
-function WorkOrderModal({ quote: q, onClose }: { quote: QuoteRow & { rowIndex: number }; onClose: () => void }) {
+function WorkOrderModal({ quote: q, onClose, onEdit }: { quote: QuoteRow & { rowIndex: number }; onClose: () => void; onEdit: () => void }) {
   let items: (Item & { area?: number; amount?: number })[] = []
   try { items = JSON.parse(q.Items || '[]') } catch { items = [] }
   const isMicrolite = q['Finish Type'] === 'MICROLITE'
@@ -291,6 +324,18 @@ function WorkOrderModal({ quote: q, onClose }: { quote: QuoteRow & { rowIndex: n
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 print:hidden">
           <h2 className="font-semibold text-gray-800">Work Order — {q['Quote No']}</h2>
           <div className="flex gap-2">
+            <button onClick={onEdit} className="btn-outline-gold text-sm flex items-center gap-1.5"><Pencil size={13}/> Edit</button>
+            <button
+              onClick={() => {
+                if (!q['Client Email']) return
+                const subject = `Quotation ${q['Quote No']} from Adora Coatings`
+                const body = `Dear ${q['Client Name']},\n\nPlease find your quotation details below.\n\nQuotation No: ${q['Quote No']}\nDate: ${q.Date}\nGrand Total: ${fmt(Number(q['Grand Total']) || 0)}\n\nThank you,\nAdora Coatings`
+                window.location.href = `mailto:${q['Client Email']}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+              }}
+              disabled={!q['Client Email']}
+              title={q['Client Email'] ? `Email ${q['Client Email']}` : 'No email saved for this client'}
+              className="btn-outline-gold text-sm flex items-center gap-1.5 disabled:opacity-40"
+            ><Mail size={13}/> Email</button>
             <button onClick={() => window.print()} className="btn-gold text-sm">Print</button>
             <button onClick={onClose} className="btn-outline-gold text-sm">Close</button>
           </div>
@@ -317,6 +362,8 @@ function WorkOrderModal({ quote: q, onClose }: { quote: QuoteRow & { rowIndex: n
                 <td className="border border-gray-400 p-2 align-top w-1/2">
                   <p><b>Client Name:</b> {q['Client Name']}</p>
                   <p><b>Address:</b> {q['Client Address'] || '—'}</p>
+                  <p><b>Phone:</b> {q['Client Phone'] || '—'}</p>
+                  <p><b>Email:</b> {q['Client Email'] || '—'}</p>
                 </td>
               </tr>
               <tr>
@@ -426,16 +473,20 @@ function WorkOrderModal({ quote: q, onClose }: { quote: QuoteRow & { rowIndex: n
   )
 }
 
-function CreateQuotation({ existingQuotes, onSaved, showToast }: { existingQuotes: QuoteRow[]; onSaved: () => void; showToast: (m: string) => void }) {
-  const [quoteNo, setQuoteNo] = useState(() => nextQuoteNo(existingQuotes))
-  const [date, setDate]     = useState(today)
-  const [clientName, setClientName] = useState('')
-  const [clientAddr, setClientAddr] = useState('Bangalore')
-  const [handledBy, setHandledBy]   = useState('')
-  const [enquiredBy, setEnquiredBy] = useState('')
-  const [finishType, setFinishType] = useState<FinishType>('ACRALIYC')
-  const [items, setItems]   = useState<Item[]>([newItem(1)])
-  const [nextId, setNextId] = useState(2)
+function CreateQuotation({ existingQuotes, editing, onSaved, showToast }: { existingQuotes: QuoteRow[]; editing: (QuoteRow & { rowIndex: number }) | null; onSaved: () => void; showToast: (m: string) => void }) {
+  const editingItems: Item[] = editing ? (() => { try { return JSON.parse(editing.Items || '[]') } catch { return [newItem(1)] } })() : [newItem(1)]
+
+  const [quoteNo, setQuoteNo] = useState(() => editing ? editing['Quote No'] : nextQuoteNo(existingQuotes))
+  const [date, setDate]     = useState(editing ? editing.Date : today)
+  const [clientName, setClientName] = useState(editing ? editing['Client Name'] : '')
+  const [clientAddr, setClientAddr] = useState(editing ? editing['Client Address'] : 'Bangalore')
+  const [clientPhone, setClientPhone] = useState(editing ? editing['Client Phone'] : '')
+  const [clientEmail, setClientEmail] = useState(editing ? editing['Client Email'] : '')
+  const [handledBy, setHandledBy]   = useState(editing ? editing['Handled By'] : '')
+  const [enquiredBy, setEnquiredBy] = useState(editing ? editing['Enquired By'] : '')
+  const [finishType, setFinishType] = useState<FinishType>((editing?.['Finish Type'] as FinishType) || 'ACRALIYC')
+  const [items, setItems]   = useState<Item[]>(editingItems.length ? editingItems : [newItem(1)])
+  const [nextId, setNextId] = useState(() => Math.max(0, ...editingItems.map(i => i.id)) + 1)
   const [saving, setSaving] = useState(false)
 
   const addRowItem = () => { setItems(p => [...p, newItem(nextId)]); setNextId(n => n + 1) }
@@ -451,11 +502,22 @@ function CreateQuotation({ existingQuotes, onSaved, showToast }: { existingQuote
   const handleSave = async () => {
     if (!clientName) return
     setSaving(true)
+    // No update-in-place API — editing deletes the old row then adds the new one.
+    if (editing) {
+      const delResult = await deleteRow('Quotations', editing.rowIndex)
+      if (delResult?.status !== 'ok') {
+        setSaving(false)
+        showToast(`✗ Failed to update: ${delResult?.error || 'unknown error'}`)
+        return
+      }
+    }
     const result = await addRow('Quotations', {
       'Quote No': quoteNo,
       Date: date,
       'Client Name': clientName,
       'Client Address': clientAddr,
+      'Client Phone': clientPhone,
+      'Client Email': clientEmail,
       'Handled By': handledBy,
       'Enquired By': enquiredBy,
       'Finish Type': finishType,
@@ -463,15 +525,20 @@ function CreateQuotation({ existingQuotes, onSaved, showToast }: { existingQuote
       Total: total.toFixed(2),
       GST: gst.toFixed(2),
       'Grand Total': grandTotal.toFixed(2),
-      Status: 'In Progress',
+      Status: editing?.Status || 'In Progress',
     })
     setSaving(false)
-    if (result?.status === 'ok') { showToast(`✓ ${quoteNo} saved for ${clientName}`); onSaved() }
+    if (result?.status === 'ok') { showToast(`✓ ${quoteNo} ${editing ? 'updated' : 'saved'} for ${clientName}`); onSaved() }
     else showToast(`✗ Failed to save: ${result?.error || 'unknown error'}`)
   }
 
   return (
     <div className="space-y-4">
+      {editing && (
+        <div className="bg-brand/5 border border-brand/20 rounded-lg px-3 py-2 text-xs text-brand font-medium">
+          Editing quotation {editing['Quote No']} — changes will update this record.
+        </div>
+      )}
       <div className="card space-y-4">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div>
@@ -511,6 +578,16 @@ function CreateQuotation({ existingQuotes, onSaved, showToast }: { existingQuote
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Address</label>
             <input value={clientAddr} onChange={e => setClientAddr(e.target.value)} className="input-dark" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Client Phone</label>
+            <input value={clientPhone} onChange={e => setClientPhone(e.target.value)} placeholder="10-digit mobile number" className="input-dark" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Client Email</label>
+            <input type="email" value={clientEmail} onChange={e => setClientEmail(e.target.value)} placeholder="client@example.com" className="input-dark" />
           </div>
         </div>
       </div>
@@ -593,10 +670,10 @@ function CreateQuotation({ existingQuotes, onSaved, showToast }: { existingQuote
       </div>
 
       <div className="flex items-center justify-between py-2">
-        <button onClick={() => { setItems([newItem(1)]); setNextId(2); setClientName(''); setHandledBy(''); setEnquiredBy(''); setFinishType('ACRALIYC') }}
+        <button onClick={() => { setItems([newItem(1)]); setNextId(2); setClientName(''); setClientPhone(''); setClientEmail(''); setHandledBy(''); setEnquiredBy(''); setFinishType('ACRALIYC') }}
           className="btn-ghost text-sm">Clear</button>
         <button disabled={!clientName || saving} onClick={handleSave} className="btn-gold flex items-center gap-1.5 text-sm disabled:opacity-50">
-          {saving ? 'Saving...' : 'Save Quotation → Sheet'}
+          {saving ? 'Saving...' : editing ? 'Update Quotation' : 'Save Quotation → Sheet'}
         </button>
       </div>
     </div>

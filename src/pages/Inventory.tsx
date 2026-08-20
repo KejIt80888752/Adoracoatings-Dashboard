@@ -140,7 +140,10 @@ export default function Inventory() {
   // the physical-audit baseline (INITIAL_STOCK), so a page reload doesn't lose
   // any Add Stock / Dispatch / Return / Transfer actions logged since the audit.
   // A 'Deleted' location entry permanently removes a product from the catalog
-  // — it's excluded from the baseline before any other row is replayed.
+  // — it's excluded from the baseline before any other row is replayed. A
+  // 'NewProduct' entry (Notes carries JSON {unit,packSize}) adds a brand new
+  // catalog row, since INITIAL_STOCK itself is a fixed baseline in source code
+  // and can't otherwise grow with products added from the UI.
   const syncFromSheet = useCallback(async (silent = false) => {
     setSyncing(true)
     const rows = await fetchSheet<StockLogRow>('Stock')
@@ -150,12 +153,24 @@ export default function Inventory() {
         const next = INITIAL_STOCK.filter(s => !deletedNames.has(s.name)).map(s => ({ ...s }))
         for (const row of rows) {
           if (row.Location === 'Deleted') continue
-          const item = next.find(s => s.name === row.Product)
+          if (deletedNames.has(row.Product)) continue
+          let item = next.find(s => s.name === row.Product)
+          if (!item && row.Location === 'NewProduct') {
+            let meta: { unit?: string; packSize?: string } = {}
+            try { meta = JSON.parse(row.Notes || '{}') } catch { /* ignore malformed metadata */ }
+            item = { sl: next.length + 1, name: row.Product, unit: meta.unit || 'Nos', packSize: meta.packSize || '', godownQty: 0, godownKg: 0, seaAirQty: 0, seaAirKg: 0, dispatch: 0, productReturn: 0 }
+            next.push(item)
+            continue
+          }
           if (!item) continue
           const qty = Number(row.Qty) || 0
           if (row.Location === 'Godown')                    { item.godownQty += qty; item.godownKg += qty }
           else if (row.Location === 'Sea Air Logistics')     { item.seaAirQty += qty; item.seaAirKg += qty }
-          else if (row.Location === 'Dispatch')              { item.dispatch += qty }
+          // Dispatch moves stock OUT of Godown to site -- it must reduce the
+          // total, not just tally a separate counter (that was the bug: Total
+          // Kg/L never dropped after a dispatch, and a later Return then over-
+          // counted on top of the un-decremented total).
+          else if (row.Location === 'Dispatch')              { item.dispatch += qty; item.godownQty -= qty; item.godownKg -= qty }
           else if (row.Location?.startsWith('Return'))       { item.productReturn += qty; item.godownQty += qty; item.godownKg += qty }
         }
         return next
@@ -273,9 +288,14 @@ export default function Inventory() {
 
   const handleDispatch = async () => {
     if (!dispForm.product || !dispForm.qty) return
-    setSaving(true)
     const qty = Number(dispForm.qty)
-    setStock(prev => prev.map(s => s.name === dispForm.product ? { ...s, dispatch: s.dispatch + qty } : s))
+    const current = stock.find(s => s.name === dispForm.product)
+    if (current && qty > current.godownQty) {
+      showToast(`✗ Only ${current.godownQty} units of ${dispForm.product} in Godown`)
+      return
+    }
+    setSaving(true)
+    setStock(prev => prev.map(s => s.name === dispForm.product ? { ...s, dispatch: s.dispatch + qty, godownQty: s.godownQty - qty, godownKg: s.godownKg - qty } : s))
     await addRow('Stock', { Product: dispForm.product, Location: 'Dispatch', Qty: dispForm.qty, Notes: `Project: ${dispForm.project} | ${dispForm.notes}`, 'Updated By': 'Dashboard', Date: dispForm.date })
     setSaving(false)
     showToast(`✓ ${dispForm.product} — ${qty} units dispatched`)
@@ -497,15 +517,30 @@ export default function Inventory() {
               <select className="input-dark" value={newProd.category} onChange={e=>setNewProd(p=>({...p,category:e.target.value}))}>
                 {['Wall Finishes','Plasters & Stucco','Concrete & Microcement','Protective Coats','Oxidised Effects','Colour Pigments','Additives'].map(c=><option key={c}>{c}</option>)}
               </select></div>
-            <button disabled={!newProd.name}
-              onClick={() => {
+            <button disabled={!newProd.name || saving}
+              onClick={async () => {
                 if (!newProd.name) return
-                setStock(prev => [...prev, { sl: prev.length+1, name: newProd.name, unit: newProd.unit, packSize: newProd.packSize, godownQty:0, godownKg:0, seaAirQty:0, seaAirKg:0, dispatch:0, productReturn:0 }])
-                showToast(`✓ "${newProd.name}" added to catalog!`)
-                setNewProd({ name:'', unit:'Ltr', packSize:'1 Ltr', category:'Wall Finishes' })
+                if (stock.some(s => s.name.toLowerCase() === newProd.name.toLowerCase())) {
+                  showToast(`✗ "${newProd.name}" already exists in the catalog`)
+                  return
+                }
+                setSaving(true)
+                const result = await addRow('Stock', {
+                  Product: newProd.name, Location: 'NewProduct', Qty: 0,
+                  Notes: JSON.stringify({ unit: newProd.unit, packSize: newProd.packSize }),
+                  'Updated By': 'Dashboard', Date: new Date().toLocaleDateString('en-IN'),
+                })
+                setSaving(false)
+                if (result?.status === 'ok') {
+                  showToast(`✓ "${newProd.name}" added to catalog!`)
+                  setNewProd({ name:'', unit:'Ltr', packSize:'1 Ltr', category:'Wall Finishes' })
+                  syncFromSheet(true)
+                } else {
+                  showToast(`✗ Failed to add: ${result?.error || 'unknown error'}`)
+                }
               }}
               className="btn-gold w-full py-2.5 disabled:opacity-50">
-              <Plus size={14} className="inline mr-1.5"/>Add Product to Catalog
+              <Plus size={14} className="inline mr-1.5"/>{saving ? 'Saving...' : 'Add Product to Catalog'}
             </button>
           </div>
         )}

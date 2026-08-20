@@ -5,6 +5,16 @@ import { fetchSheet, addRow, deleteRow } from '../lib/api'
 
 const fmt = (n: number) => '₹' + n.toLocaleString('en-IN')
 
+// Google Sheets round-trips a plain date string as a full ISO datetime
+// ("2026-08-13T00:00:00.000Z"), which looked like a stray 00:00:00 timestamp
+// everywhere a saved Date was displayed. Strip it down to just the date.
+const fmtDate = (d: string) => {
+  if (!d) return '—'
+  const iso = d.match(/^(\d{4})-(\d{2})-(\d{2})T/)
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`
+  return d
+}
+
 // Builds a wa.me deep link with a pre-filled message. Indian 10-digit numbers
 // get the country code prefixed automatically; anything already prefixed or
 // non-Indian is passed through as-is (just stripped of non-digit characters).
@@ -14,7 +24,13 @@ const waLink = (phone: string, text: string) => {
   return `https://wa.me/${withCountryCode}?text=${encodeURIComponent(text)}`
 }
 
-type Item = { id: number; particulars: string; texture: string; length: number; height: number; nos: number; coefficient: number; rate: number }
+type Item = {
+  id: number; particulars: string; texture: string; length: number; height: number; nos: number; coefficient: number; rate: number
+  // Typed directly instead of derived from Length x Height x Nos x Co-efficient
+  // (or from Area x Rate) -- lets a quotation be built from just a known Area
+  // or a known Amount, with no division anywhere so there's no zero-denominator case.
+  areaOverride?: number; amountOverride?: number
+}
 type QuoteRow = { 'Quote No': string; Date: string; 'Client Name': string; 'Client Address': string; 'Client Phone': string; 'Client Email': string; 'Handled By': string; 'Enquired By': string; 'Finish Type': string; Items: string; Total: string; GST: string; 'Grand Total': string; Status: string; Notes: string }
 
 const FINISH_TYPES = ['ACRALIYC', 'MICROLITE'] as const
@@ -127,8 +143,8 @@ function newItem(id: number): Item {
   return { id, particulars: '', texture: '', length: 0, height: 0, nos: 1, coefficient: 1, rate: 0 }
 }
 
-const area = (it: Item) => Math.round(it.length * it.height * it.nos * it.coefficient * 100) / 100
-const amount = (it: Item) => Math.round(area(it) * it.rate * 100) / 100
+const area = (it: Item) => it.areaOverride != null ? it.areaOverride : Math.round(it.length * it.height * it.nos * it.coefficient * 100) / 100
+const amount = (it: Item) => it.amountOverride != null ? it.amountOverride : Math.round(area(it) * it.rate * 100) / 100
 
 export default function Quotation() {
   const [tab, setTab]       = useState<'list' | 'create'>('list')
@@ -160,17 +176,21 @@ export default function Quotation() {
     else showToast(`✗ Failed to delete: ${result?.error || 'unknown error'}`)
   }
 
+  // Client Phone/Email saved on the record are just a convenience -- if
+  // missing, ask for one on the spot rather than blocking the share.
   const emailQuote = (q: QuoteRow & { rowIndex: number }) => {
-    if (!q['Client Email']) { showToast('✗ No email saved for this client — edit the quotation to add one'); return }
+    const to = q['Client Email'] || window.prompt('Client email address to send to:') || ''
+    if (!to) return
     const subject = `Quotation ${q['Quote No']} from Adora Coatings`
-    const body = `Dear ${q['Client Name']},\n\nPlease find your quotation details below.\n\nQuotation No: ${q['Quote No']}\nDate: ${q.Date}\nGrand Total: ${fmt(Number(q['Grand Total']) || 0)}\n\nThank you,\nAdora Coatings`
-    window.location.href = `mailto:${q['Client Email']}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+    const body = `Dear ${q['Client Name']},\n\nPlease find your quotation details below.\n\nQuotation No: ${q['Quote No']}\nDate: ${fmtDate(q.Date)}\nGrand Total: ${fmt(Number(q['Grand Total']) || 0)}\n\nThank you,\nAdora Coatings`
+    window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
   }
 
   const whatsappQuote = (q: QuoteRow & { rowIndex: number }) => {
-    if (!q['Client Phone']) { showToast('✗ No phone number saved for this client — edit the quotation to add one'); return }
-    const text = `Dear ${q['Client Name']}, please find your quotation from Adora Coatings.\n\nQuotation No: ${q['Quote No']}\nDate: ${q.Date}\nGrand Total: ${fmt(Number(q['Grand Total']) || 0)}\n\nThank you,\nAdora Coatings`
-    window.open(waLink(q['Client Phone'], text), '_blank')
+    const phone = q['Client Phone'] || window.prompt('Client phone number to WhatsApp:') || ''
+    if (!phone) return
+    const text = `Dear ${q['Client Name']}, please find your quotation from Adora Coatings.\n\nQuotation No: ${q['Quote No']}\nDate: ${fmtDate(q.Date)}\nGrand Total: ${fmt(Number(q['Grand Total']) || 0)}\n\nThank you,\nAdora Coatings`
+    window.open(waLink(phone, text), '_blank')
   }
 
   const filtered = quotes.filter(q =>
@@ -255,7 +275,7 @@ export default function Quotation() {
                     <tr key={q.rowIndex}>
                       <td className="text-xs text-gray-500 font-mono">{q['Quote No']}</td>
                       <td className="font-medium">{q['Client Name']}</td>
-                      <td className="text-gray-500">{q.Date}</td>
+                      <td className="text-gray-500">{fmtDate(q.Date)}</td>
                       <td>{fmt(Number(q.Total) || 0)}</td>
                       <td className="text-gray-500">{fmt(Number(q.GST) || 0)}</td>
                       <td className="font-semibold text-brand">{fmt(Number(q['Grand Total']) || 0)}</td>
@@ -348,24 +368,24 @@ function WorkOrderModal({ quote: q, onClose, onEdit }: { quote: QuoteRow & { row
             <button onClick={onEdit} className="btn-outline-gold text-sm flex items-center gap-1.5"><Pencil size={13}/> Edit</button>
             <button
               onClick={() => {
-                if (!q['Client Email']) return
+                const to = q['Client Email'] || window.prompt('Client email address to send to:') || ''
+                if (!to) return
                 const subject = `Quotation ${q['Quote No']} from Adora Coatings`
-                const body = `Dear ${q['Client Name']},\n\nPlease find your quotation details below.\n\nQuotation No: ${q['Quote No']}\nDate: ${q.Date}\nGrand Total: ${fmt(Number(q['Grand Total']) || 0)}\n\nThank you,\nAdora Coatings`
-                window.location.href = `mailto:${q['Client Email']}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+                const body = `Dear ${q['Client Name']},\n\nPlease find your quotation details below.\n\nQuotation No: ${q['Quote No']}\nDate: ${fmtDate(q.Date)}\nGrand Total: ${fmt(Number(q['Grand Total']) || 0)}\n\nThank you,\nAdora Coatings`
+                window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
               }}
-              disabled={!q['Client Email']}
-              title={q['Client Email'] ? `Email ${q['Client Email']}` : 'No email saved for this client'}
-              className="btn-outline-gold text-sm flex items-center gap-1.5 disabled:opacity-40"
+              title={q['Client Email'] ? `Email ${q['Client Email']}` : 'No email saved — you will be asked for one'}
+              className="btn-outline-gold text-sm flex items-center gap-1.5"
             ><Mail size={13}/> Email</button>
             <button
               onClick={() => {
-                if (!q['Client Phone']) return
-                const text = `Dear ${q['Client Name']}, please find your quotation from Adora Coatings.\n\nQuotation No: ${q['Quote No']}\nDate: ${q.Date}\nGrand Total: ${fmt(Number(q['Grand Total']) || 0)}\n\nThank you,\nAdora Coatings`
-                window.open(waLink(q['Client Phone'], text), '_blank')
+                const phone = q['Client Phone'] || window.prompt('Client phone number to WhatsApp:') || ''
+                if (!phone) return
+                const text = `Dear ${q['Client Name']}, please find your quotation from Adora Coatings.\n\nQuotation No: ${q['Quote No']}\nDate: ${fmtDate(q.Date)}\nGrand Total: ${fmt(Number(q['Grand Total']) || 0)}\n\nThank you,\nAdora Coatings`
+                window.open(waLink(phone, text), '_blank')
               }}
-              disabled={!q['Client Phone']}
-              title={q['Client Phone'] ? `WhatsApp ${q['Client Phone']}` : 'No phone number saved for this client'}
-              className="btn-outline-gold text-sm flex items-center gap-1.5 disabled:opacity-40"
+              title={q['Client Phone'] ? `WhatsApp ${q['Client Phone']}` : 'No phone number saved — you will be asked for one'}
+              className="btn-outline-gold text-sm flex items-center gap-1.5"
             ><MessageCircle size={13}/> WhatsApp</button>
             <button onClick={() => window.print()} className="btn-gold text-sm">Print</button>
             <button onClick={onClose} className="btn-outline-gold text-sm">Close</button>
@@ -386,7 +406,7 @@ function WorkOrderModal({ quote: q, onClose, onEdit }: { quote: QuoteRow & { row
               <tr>
                 <td className="border border-gray-400 p-2 align-top w-1/2">
                   <p><b>Quotation No:</b> {q['Quote No']}</p>
-                  <p><b>Date:</b> {q.Date}</p>
+                  <p><b>Date:</b> {fmtDate(q.Date)}</p>
                   <p><b>Handled By:</b> {q['Handled By'] || '—'}</p>
                   <p><b>Enquired By / Reference:</b> {q['Enquired By'] || '—'}</p>
                 </td>
@@ -439,7 +459,11 @@ function WorkOrderModal({ quote: q, onClose, onEdit }: { quote: QuoteRow & { row
               </tr>
               <tr>
                 <td colSpan={2} className="border-x border-b border-gray-400 p-2 bg-yellow-50">
-                  <b>PLEASE NOTE:</b> The validity of this quotation is 4 days. Rates will vary as per the colour shade — exact rates shall be quoted once the colours are decided.
+                  <b>PLEASE NOTE:</b>
+                  <ol className="mt-1 space-y-0.5">
+                    <li>1. The validity of this quotation is 4 days.</li>
+                    <li>2. Rates will vary as per the colour shade — exact rates shall be quoted once the colours are decided.</li>
+                  </ol>
                 </td>
               </tr>
               {q.Notes && (
@@ -459,6 +483,7 @@ function WorkOrderModal({ quote: q, onClose, onEdit }: { quote: QuoteRow & { row
 
           {isMicrolite ? (
             <>
+              <h3 className="text-xs font-bold text-brand bg-gray-50 border border-gray-400 px-2 py-1.5 mb-4">Terms & Condition</h3>
               <div className="border border-gray-400 mb-4 p-2 text-xs text-gray-700">{MICROLITE_PREPARATION_INTRO}</div>
               <h3 className="text-xs font-bold text-brand bg-gray-50 border border-gray-400 px-2 py-1.5 mb-4">Preparation</h3>
               <Section title="1. Site Condition & Preparation" terms={MICROLITE_SITE_TERMS} />
@@ -487,11 +512,11 @@ function WorkOrderModal({ quote: q, onClose, onEdit }: { quote: QuoteRow & { row
                 <>
                   <p>We hereby appoint your company for MICROLITE Services as detailed below:</p>
                   <p><b>Project Name:</b> {q['Client Name']}<br/><b>Project Address:</b> {q['Client Address'] || '—'}</p>
-                  <p><b>Services:</b> Ref Item Details table above &nbsp; <b>Fees:</b> {fmt(Number(q['Grand Total']) || 0)} (inclusive of GST), as per Quotation No. {q['Quote No']} dated {q.Date}.</p>
+                  <p><b>Services:</b> Ref Item Details table above &nbsp; <b>Fees:</b> {fmt(Number(q['Grand Total']) || 0)} (inclusive of GST), as per Quotation No. {q['Quote No']} dated {fmtDate(q.Date)}.</p>
                   <p>This letter of appointment together with the conditions of contract as stated above, shall govern the agreement.</p>
                 </>
               ) : (
-                <p>We hereby appoint Adora Coatings for the services detailed in the item table above, as per Quotation No. {q['Quote No']} dated {q.Date}, for a total value of {fmt(Number(q['Grand Total']) || 0)} (inclusive of GST).</p>
+                <p>We hereby appoint Adora Coatings for the services detailed in the item table above, as per Quotation No. {q['Quote No']} dated {fmtDate(q.Date)}, for a total value of {fmt(Number(q['Grand Total']) || 0)} (inclusive of GST).</p>
               )}
               <p>Thanking you,<br/>Yours sincerely,</p>
             </div>
@@ -515,7 +540,7 @@ function CreateQuotation({ existingQuotes, editing, onSaved, showToast }: { exis
   const editingItems: Item[] = editing ? (() => { try { return JSON.parse(editing.Items || '[]') } catch { return [newItem(1)] } })() : [newItem(1)]
 
   const [quoteNo, setQuoteNo] = useState(() => editing ? editing['Quote No'] : nextQuoteNo(existingQuotes))
-  const [date, setDate]     = useState(editing ? editing.Date : today)
+  const [date, setDate]     = useState(editing ? fmtDate(editing.Date) : today)
   const [clientName, setClientName] = useState(editing ? editing['Client Name'] : '')
   const [clientAddr, setClientAddr] = useState(editing ? editing['Client Address'] : 'Bangalore')
   const [clientPhone, setClientPhone] = useState(editing ? editing['Client Phone'] : '')
@@ -531,7 +556,20 @@ function CreateQuotation({ existingQuotes, editing, onSaved, showToast }: { exis
   const addRowItem = () => { setItems(p => [...p, newItem(nextId)]); setNextId(n => n + 1) }
   const removeItem = (id: number) => setItems(p => p.filter(i => i.id !== id))
   const updateItem = (id: number, field: keyof Item, value: string | number) => {
-    setItems(p => p.map(it => it.id !== id ? it : { ...it, [field]: value }))
+    setItems(p => p.map(it => {
+      if (it.id !== id) return it
+      // Typing Area directly overrides the geometric calc; typing Amount
+      // directly overrides everything. Editing any of the dimension fields
+      // (or Rate) drops the override for whichever value it would otherwise
+      // feed, so the field goes back to being calculated.
+      if (field === 'areaOverride')   return { ...it, areaOverride: value as number, amountOverride: undefined }
+      if (field === 'amountOverride') return { ...it, amountOverride: value as number }
+      if (field === 'rate')           return { ...it, rate: value as number, amountOverride: undefined }
+      if (['length','height','nos','coefficient'].includes(field as string)) {
+        return { ...it, [field]: value, areaOverride: undefined, amountOverride: undefined }
+      }
+      return { ...it, [field]: value }
+    }))
   }
 
   const total      = items.reduce((s, i) => s + amount(i), 0)
@@ -639,7 +677,7 @@ function CreateQuotation({ existingQuotes, editing, onSaved, showToast }: { exis
       <div className="card p-0 overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
           <p className="font-semibold text-gray-700 text-sm">Item Details</p>
-          <p className="text-xs text-gray-400">Area (SFT) = Length × Height × Nos × Co-efficient</p>
+          <p className="text-xs text-gray-400">Area = Length × Height × Nos × Co-efficient, but Area and Amount can also be typed directly</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -677,12 +715,20 @@ function CreateQuotation({ existingQuotes, editing, onSaved, showToast }: { exis
                     <input type="number" min={0} step={0.1} value={item.coefficient} onChange={e => updateItem(item.id,'coefficient',+e.target.value)}
                       className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-right focus:outline-none focus:border-brand" />
                   </td>
-                  <td className="px-3 py-2 text-right text-gray-600 font-medium whitespace-nowrap">{area(item).toLocaleString('en-IN')}</td>
+                  <td className="px-2 py-2 w-24">
+                    <input type="number" min={0} value={area(item)} onChange={e => updateItem(item.id,'areaOverride',+e.target.value)}
+                      title="Only know the total area? Type it directly here instead of Length/Height/Nos/Co-efficient."
+                      className={`w-24 border rounded-lg px-2 py-1.5 text-xs text-right focus:outline-none focus:border-brand ${item.areaOverride != null ? 'border-brand/50 bg-brand/5' : 'border-gray-200'}`} />
+                  </td>
                   <td className="px-2 py-2 w-24">
                     <input type="number" min={0} value={item.rate} onChange={e => updateItem(item.id,'rate',+e.target.value)}
                       className="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-right focus:outline-none focus:border-brand" />
                   </td>
-                  <td className="px-3 py-2 text-right font-semibold text-brand whitespace-nowrap">{fmt(amount(item))}</td>
+                  <td className="px-2 py-2 w-28">
+                    <input type="number" min={0} value={amount(item)} onChange={e => updateItem(item.id,'amountOverride',+e.target.value)}
+                      title="Only know the final amount? Type it directly here instead of Rate."
+                      className={`w-28 border rounded-lg px-2 py-1.5 text-xs text-right font-semibold focus:outline-none focus:border-brand ${item.amountOverride != null ? 'border-brand/50 bg-brand/5 text-brand' : 'border-gray-200 text-brand'}`} />
+                  </td>
                   <td className="px-2 py-2">
                     {items.length > 1 && (
                       <button onClick={() => removeItem(item.id)} className="text-gray-300 hover:text-red-400 transition-colors p-1">

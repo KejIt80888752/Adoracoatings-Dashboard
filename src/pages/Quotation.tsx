@@ -257,11 +257,17 @@ export default function Quotation() {
               </div>
             </div>
             <div className="overflow-auto max-h-[65vh]">
-              <table className="tbl">
+              <table className="tbl tbl-stable">
+                <colgroup>
+                  <col style={{width:130}} /><col style={{width:220}} /><col style={{width:100}} />
+                  <col style={{width:100}} /><col style={{width:100}} /><col style={{width:110}} /><col style={{width:100}} />
+                  <col style={{width:52}} /><col style={{width:52}} /><col style={{width:52}} /><col style={{width:52}} /><col style={{width:52}} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Quotation #</th><th>Client</th><th>Date</th>
-                    <th>Total</th><th>GST (18%)</th><th>Grand Total</th><th>Status</th><th>Work Order</th><th>Email</th><th>WhatsApp</th><th>Edit</th><th>Delete</th>
+                    <th>Total</th><th>GST (18%)</th><th>Grand Total</th><th>Status</th>
+                    <th className="tbl-icon-col whitespace-normal leading-tight">Work Order</th><th className="tbl-icon-col whitespace-normal leading-tight">Email</th><th className="tbl-icon-col whitespace-normal leading-tight">WhatsApp</th><th className="tbl-icon-col whitespace-normal leading-tight">Edit</th><th className="tbl-icon-col whitespace-normal leading-tight">Delete</th>
                   </tr>
                 </thead>
                 <tbody>

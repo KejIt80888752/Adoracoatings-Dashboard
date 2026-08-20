@@ -820,8 +820,12 @@ function InvoiceList({ onNew, onEditInvoice, onEditChallan }: {
   const proformas    = invoices.filter(r => r['Doc Type'] === 'Proforma Invoice')
 
   const InvoiceRows = ({ rows, empty }: { rows: (InvoiceRow & { rowIndex: number })[]; empty: string }) => (
-    <table className="tbl w-full">
-      <thead><tr><th>Invoice #</th><th>Party</th><th>Date</th><th className="text-right">Amount</th><th>Status</th><th>View</th><th>Edit</th><th>Email</th><th>WhatsApp</th><th>Delete</th></tr></thead>
+    <table className="tbl tbl-stable">
+      <colgroup>
+        <col style={{width:150}} /><col style={{width:200}} /><col style={{width:100}} /><col style={{width:120}} /><col style={{width:90}} />
+        <col style={{width:52}} /><col style={{width:52}} /><col style={{width:52}} /><col style={{width:52}} /><col style={{width:52}} />
+      </colgroup>
+      <thead><tr><th>Invoice #</th><th>Party</th><th>Date</th><th className="text-right">Amount</th><th>Status</th><th className="tbl-icon-col whitespace-normal leading-tight">View</th><th className="tbl-icon-col whitespace-normal leading-tight">Edit</th><th className="tbl-icon-col whitespace-normal leading-tight">Email</th><th className="tbl-icon-col whitespace-normal leading-tight">WhatsApp</th><th className="tbl-icon-col whitespace-normal leading-tight">Delete</th></tr></thead>
       <tbody>
         {loading && <tr><td colSpan={10} className="text-center py-8 text-gray-400">Loading…</td></tr>}
         {!loading && rows.length === 0 && <tr><td colSpan={10} className="text-center py-8 text-gray-400">{empty}</td></tr>}
@@ -878,8 +882,12 @@ function InvoiceList({ onNew, onEditInvoice, onEditChallan }: {
       <div className="card p-0 overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 font-semibold text-sm text-gray-700">Delivery Challans</div>
         <div className="overflow-auto max-h-[50vh]">
-          <table className="tbl w-full">
-            <thead><tr><th>Challan #</th><th>Client / Project</th><th>Date</th><th>Status</th><th>View</th><th>Edit</th><th>Email</th><th>WhatsApp</th><th>Delete</th></tr></thead>
+          <table className="tbl tbl-stable">
+            <colgroup>
+              <col style={{width:150}} /><col style={{width:200}} /><col style={{width:100}} /><col style={{width:90}} />
+              <col style={{width:52}} /><col style={{width:52}} /><col style={{width:52}} /><col style={{width:52}} /><col style={{width:52}} />
+            </colgroup>
+            <thead><tr><th>Challan #</th><th>Client / Project</th><th>Date</th><th>Status</th><th className="tbl-icon-col whitespace-normal leading-tight">View</th><th className="tbl-icon-col whitespace-normal leading-tight">Edit</th><th className="tbl-icon-col whitespace-normal leading-tight">Email</th><th className="tbl-icon-col whitespace-normal leading-tight">WhatsApp</th><th className="tbl-icon-col whitespace-normal leading-tight">Delete</th></tr></thead>
             <tbody>
               {loading && <tr><td colSpan={9} className="text-center py-8 text-gray-400">Loading…</td></tr>}
               {!loading && challans.length === 0 && <tr><td colSpan={9} className="text-center py-8 text-gray-400">No challans saved yet</td></tr>}

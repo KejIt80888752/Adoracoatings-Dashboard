@@ -400,7 +400,13 @@ export default function Inventory() {
             </div>
 
             <div className="overflow-auto max-h-[65vh] rounded-xl border" style={{borderColor:'var(--border-2)'}}>
-              <table className="tbl w-full">
+              <table className="tbl tbl-stable">
+                <colgroup>
+                  <col style={{width:40}} /><col style={{width:220}} /><col style={{width:100}} />
+                  <col style={{width:80}} /><col style={{width:80}} /><col style={{width:80}} /><col style={{width:80}} />
+                  <col style={{width:80}} /><col style={{width:90}} /><col style={{width:80}} /><col style={{width:90}} />
+                  <col style={{width:52}} /><col style={{width:52}} /><col style={{width:52}} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>#</th>
@@ -414,9 +420,9 @@ export default function Inventory() {
                     <th className="text-center" style={{background:'rgba(16,185,129,0.06)'}}>Product Return</th>
                     <th className="text-center font-bold">Total Kg/L</th>
                     <th className="text-center">Status</th>
-                    <th className="text-center">Transfer</th>
-                    <th className="text-center">Edit</th>
-                    <th className="text-center">Delete</th>
+                    <th className="text-center tbl-icon-col whitespace-normal leading-tight">Transfer</th>
+                    <th className="text-center tbl-icon-col whitespace-normal leading-tight">Edit</th>
+                    <th className="text-center tbl-icon-col whitespace-normal leading-tight">Delete</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -465,11 +471,15 @@ export default function Inventory() {
             <div>
               <p className="text-sm font-semibold mb-2" style={{color:'var(--text-1)'}}>Recent Stock Entries</p>
               <div className="overflow-auto max-h-[65vh] rounded-xl border" style={{borderColor:'var(--border-2)'}}>
-                <table className="tbl w-full">
+                <table className="tbl tbl-stable">
+                  <colgroup>
+                    <col style={{width:180}} /><col style={{width:120}} /><col style={{width:70}} />
+                    <col style={{width:220}} /><col style={{width:110}} /><col style={{width:52}} />
+                  </colgroup>
                   <thead>
                     <tr>
                       <th>Product</th><th>Location</th><th className="text-center">Qty</th>
-                      <th>Notes</th><th>Date</th><th className="text-center">Delete</th>
+                      <th>Notes</th><th>Date</th><th className="text-center tbl-icon-col whitespace-normal leading-tight">Delete</th>
                     </tr>
                   </thead>
                   <tbody>

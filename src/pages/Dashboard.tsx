@@ -1,27 +1,111 @@
+import { useEffect, useState } from 'react'
 import { TrendingUp, Package, Users, IndianRupee, AlertTriangle, CheckCircle2, ArrowUpRight } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
+import { fetchSheet } from '../lib/api'
 
-const fmt = (n: number) => '₹' + n.toLocaleString('en-IN')
+const fmt = (n: number) => '₹' + Math.round(n).toLocaleString('en-IN')
 
-const revenueData: { m: string; revenue: number; profit: number }[] = []
+// Sheet dates round-trip as either a plain "DD/MM/YYYY" string (typed via the
+// forms) or a full ISO datetime (Google Sheets' auto-conversion) -- handle both.
+function parseDate(d: string): Date | null {
+  if (!d) return null
+  const iso = d.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (iso) return new Date(+iso[1], +iso[2] - 1, +iso[3])
+  const dmy = d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/)
+  if (dmy) return new Date(+dmy[3], +dmy[2] - 1, +dmy[1])
+  return null
+}
 
-const topProjects: { name: string; value: number; profit: number }[] = []
+function fmtDate(d: string): string {
+  const parsed = parseDate(d)
+  if (!parsed) return d || '—'
+  return `${String(parsed.getDate()).padStart(2,'0')}/${String(parsed.getMonth()+1).padStart(2,'0')}/${parsed.getFullYear()}`
+}
 
-const recentProjects: { name: string; date: string; status: string }[] = []
+type InvoiceRow = {
+  'Doc Type': string; 'Invoice No': string; Date: string; Party: string
+  'Sub Total': string; CGST: string; SGST: string; IGST: string; 'Grand Total': string
+  'Advance Paid': string; 'Total Due': string; Status: string
+}
+type QuoteRow = { 'Quote No': string; Date: string; 'Client Name': string; Status: string; 'Grand Total': string }
 
-const alerts: { msg: string; warn: boolean }[] = []
-
-const STATS = [
-  { label: 'Total Revenue',   val: '₹0', sub: '0 projects',    icon: IndianRupee, color: 'text-brand'       },
-  { label: 'Gross Profit',    val: '₹0', sub: '—',             icon: TrendingUp,  color: 'text-green-500'  },
-  { label: 'Total Collected', val: '₹0', sub: 'Incl. advances', icon: Package,     color: 'text-blue-500'   },
-  { label: 'Active Projects', val: '0',  sub: 'FY 2026–27',     icon: Users,       color: 'text-purple-500' },
-]
-
-const statusBadge: Record<string, string> = { Settled: 'badge-green', Pending: 'badge-yellow', 'In Progress': 'badge-blue' }
+const statusBadge: Record<string, string> = { Settled: 'badge-green', Paid: 'badge-green', Pending: 'badge-yellow', 'In Progress': 'badge-blue' }
 const tipStyle = { backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 12, color: '#374151' }
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
 export default function Dashboard() {
+  const [invoices, setInvoices] = useState<InvoiceRow[]>([])
+  const [quotes, setQuotes] = useState<QuoteRow[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    Promise.all([
+      fetchSheet<InvoiceRow>('Invoices'),
+      fetchSheet<QuoteRow>('Quotations'),
+    ]).then(([inv, q]) => { setInvoices(inv); setQuotes(q) }).finally(() => setLoading(false))
+  }, [])
+
+  const taxInvoices = invoices.filter(r => r['Doc Type'] === 'Tax Invoice')
+
+  const totalRevenue = taxInvoices.reduce((s, r) => s + (Number(r['Grand Total']) || 0), 0)
+  const gstPaid      = taxInvoices.reduce((s, r) => s + (Number(r.CGST) || 0) + (Number(r.SGST) || 0) + (Number(r.IGST) || 0), 0)
+  const grossProfit  = totalRevenue - gstPaid
+  const totalCollected = taxInvoices.reduce((s, r) => {
+    if (r.Status === 'Paid') return s + (Number(r['Grand Total']) || 0)
+    return s + (Number(r['Advance Paid']) || 0)
+  }, 0)
+  const activeProjects = quotes.filter(q => q.Status !== 'Completed').length
+
+  const STATS = [
+    { label: 'Total Revenue',   val: fmt(totalRevenue),   sub: `${taxInvoices.length} invoice${taxInvoices.length===1?'':'s'}`, icon: IndianRupee, color: 'text-brand'       },
+    { label: 'Gross Profit',    val: fmt(grossProfit),    sub: 'Revenue less GST',                                              icon: TrendingUp,  color: 'text-green-500'  },
+    { label: 'Total Collected', val: fmt(totalCollected), sub: 'Incl. advances',                                                icon: Package,     color: 'text-blue-500'   },
+    { label: 'Active Projects', val: String(activeProjects), sub: 'FY 2026–27',                                                 icon: Users,       color: 'text-purple-500' },
+  ]
+
+  // Monthly Revenue & Profit -- group Tax Invoices by calendar month.
+  const monthly = new Map<string, { m: string; revenue: number; profit: number; sortKey: number }>()
+  for (const r of taxInvoices) {
+    const d = parseDate(r.Date)
+    if (!d) continue
+    const key = `${d.getFullYear()}-${d.getMonth()}`
+    const grand = Number(r['Grand Total']) || 0
+    const gst = (Number(r.CGST) || 0) + (Number(r.SGST) || 0) + (Number(r.IGST) || 0)
+    const entry = monthly.get(key) || { m: MONTHS[d.getMonth()], revenue: 0, profit: 0, sortKey: d.getFullYear() * 12 + d.getMonth() }
+    entry.revenue += grand
+    entry.profit  += grand - gst
+    monthly.set(key, entry)
+  }
+  const revenueData = Array.from(monthly.values()).sort((a, b) => a.sortKey - b.sortKey)
+
+  const expenseData = [
+    { name: 'Material', v: 0 },
+    { name: 'Labour',   v: 0 },
+    { name: 'GST Paid', v: gstPaid },
+    { name: 'Misc',     v: 0 },
+  ]
+
+  const topProjects = [...taxInvoices]
+    .sort((a, b) => (Number(b['Grand Total']) || 0) - (Number(a['Grand Total']) || 0))
+    .slice(0, 5)
+    .map(r => ({
+      name: r.Party || r['Invoice No'],
+      value: Number(r['Grand Total']) || 0,
+      profit: (Number(r['Grand Total']) || 0) - ((Number(r.CGST) || 0) + (Number(r.SGST) || 0) + (Number(r.IGST) || 0)),
+    }))
+
+  const recentProjects = [...taxInvoices]
+    .map(r => ({ name: r.Party || r['Invoice No'], date: fmtDate(r.Date), status: r.Status || 'Pending', sortKey: parseDate(r.Date)?.getTime() || 0 }))
+    .sort((a, b) => b.sortKey - a.sortKey)
+    .slice(0, 5)
+
+  const overdue = taxInvoices.filter(r => (Number(r['Total Due']) || 0) > 0)
+  const alerts = overdue.slice(0, 4).map(r => ({
+    msg: `${r.Party || r['Invoice No']} has ${fmt(Number(r['Total Due']) || 0)} due on ${r['Invoice No']}`,
+    warn: true,
+  }))
+  if (alerts.length === 0 && taxInvoices.length > 0) alerts.push({ msg: 'All invoices fully collected', warn: false })
+
   return (
     <div className="space-y-5">
 
@@ -32,7 +116,7 @@ export default function Dashboard() {
             <div className={`p-2.5 rounded-xl bg-gray-50 ${s.color}`}><s.icon size={18} /></div>
             <div>
               <p className="text-xs text-gray-500 font-medium">{s.label}</p>
-              <p className="text-xl font-bold text-gray-800 mt-0.5">{s.val}</p>
+              <p className="text-xl font-bold text-gray-800 mt-0.5">{loading ? '…' : s.val}</p>
               <p className="text-xs text-gray-400 mt-0.5">{s.sub}</p>
             </div>
           </div>
@@ -72,12 +156,7 @@ export default function Dashboard() {
           <p className="section-title text-base mb-1">Expense Breakdown</p>
           <p className="section-sub mb-4">Total FY 2026–27</p>
           <ResponsiveContainer width="100%" height={210}>
-            <BarChart data={[
-              { name: 'Material', v: 0 },
-              { name: 'Labour',   v: 0 },
-              { name: 'GST Paid', v: 0 },
-              { name: 'Misc',     v: 0 },
-            ]} barSize={24}>
+            <BarChart data={expenseData} barSize={24}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={false} tickLine={false} tickFormatter={v => `₹${(v/100000).toFixed(1)}L`} />
@@ -94,11 +173,11 @@ export default function Dashboard() {
         <div className="card xl:col-span-2">
           <p className="section-title text-base mb-4">Top Projects by Revenue</p>
           <div className="space-y-3.5">
-            {topProjects.length === 0 && <p className="text-sm text-gray-400 text-center py-6">No projects yet</p>}
+            {!loading && topProjects.length === 0 && <p className="text-sm text-gray-400 text-center py-6">No projects yet</p>}
             {topProjects.map((p, i) => {
               const pct = Math.round((p.value / topProjects[0].value) * 100)
               return (
-                <div key={p.name}>
+                <div key={p.name + i}>
                   <div className="flex items-center justify-between text-sm mb-1.5">
                     <span className="text-gray-600">
                       <span className="text-gray-400 mr-2 font-mono text-xs">{String(i+1).padStart(2,'0')}</span>
@@ -123,7 +202,7 @@ export default function Dashboard() {
           <div className="card">
             <p className="section-title text-sm mb-3">Alerts</p>
             <ul className="space-y-2.5">
-              {alerts.length === 0 && <li className="text-xs text-gray-400 text-center py-2">No alerts</li>}
+              {!loading && alerts.length === 0 && <li className="text-xs text-gray-400 text-center py-2">No alerts</li>}
               {alerts.map((a, i) => (
                 <li key={i} className="flex items-start gap-2 text-xs text-gray-500">
                   {a.warn
@@ -139,14 +218,14 @@ export default function Dashboard() {
           <div className="card">
             <div className="flex items-center justify-between mb-3">
               <p className="section-title text-sm">Recent Projects</p>
-              <a href="#/orders" className="text-xs text-brand hover:text-brand-light flex items-center gap-0.5">
+              <a href="#/billing" className="text-xs text-brand hover:text-brand-light flex items-center gap-0.5">
                 View all <ArrowUpRight size={11} />
               </a>
             </div>
             <div className="space-y-2.5">
-              {recentProjects.length === 0 && <p className="text-xs text-gray-400 text-center py-2">No recent projects</p>}
-              {recentProjects.map(p => (
-                <div key={p.name} className="flex items-center gap-2">
+              {!loading && recentProjects.length === 0 && <p className="text-xs text-gray-400 text-center py-2">No recent projects</p>}
+              {recentProjects.map((p, i) => (
+                <div key={p.name + i} className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center text-brand text-xs font-bold shrink-0">
                     {p.name[0]}
                   </div>

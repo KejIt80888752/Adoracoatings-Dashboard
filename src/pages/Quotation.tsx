@@ -473,10 +473,18 @@ function WorkOrderModal({ quote: q, onClose, onEdit }: { quote: QuoteRow & { row
                   </td>
                 </tr>
               )}
-              <tr className="whitespace-pre-line">
-                <td className="border-x border-b border-gray-400 p-2 align-top w-1/3"><b>BANK DETAILS:</b><br/>{BANK_DETAILS}</td>
-                <td className="border-x border-b border-gray-400 p-2 align-top w-1/3"><b>ADDRESS:</b><br/>{COMPANY_ADDRESS}</td>
-                <td className="border-x border-b border-gray-400 p-2 align-top w-1/3"><b>PAYMENT TERMS:</b><br/>{PAYMENT_TERMS}</td>
+              <tr>
+                <td colSpan={2} className="border-x border-b border-gray-400 p-0">
+                  <table className="w-full text-xs border-collapse">
+                    <tbody>
+                      <tr className="whitespace-pre-line">
+                        <td className="p-2 align-top w-1/3"><b>BANK DETAILS:</b><br/>{BANK_DETAILS}</td>
+                        <td className="p-2 align-top w-1/3 border-x border-gray-400"><b>ADDRESS:</b><br/>{COMPANY_ADDRESS}</td>
+                        <td className="p-2 align-top w-1/3"><b>PAYMENT TERMS:</b><br/>{PAYMENT_TERMS}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </td>
               </tr>
             </tbody>
           </table>

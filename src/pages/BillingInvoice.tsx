@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, Trash2, Save, FileText, FileSpreadsheet, List, Truck, CheckCheck, Mail, MessageCircle } from 'lucide-react'
+import { Plus, Trash2, Save, FileText, FileSpreadsheet, List, Truck, CheckCheck, Mail, MessageCircle, Pencil, Eye, Image as ImageIcon, X } from 'lucide-react'
 import { fetchSheet, addRow, deleteRow } from '../lib/api'
 
 type Item = { id: number; particulars: string; qty: number; unit: string; rate: number }
@@ -8,7 +8,23 @@ type Tab = 'invoice' | 'proforma' | 'challan' | 'list'
 type DocType = 'Tax Invoice' | 'Proforma Invoice'
 
 const UNITS = ['Nos', 'Mtr', 'Kg', 'Ltr', 'Set', 'Pair', 'Box', 'Roll']
-const STATES = ['Karnataka', 'Tamil Nadu', 'Maharashtra', 'Delhi', 'Telangana', 'Kerala', 'Andhra Pradesh', 'Gujarat']
+const STATES = [
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana',
+  'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+  'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana',
+  'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+  'Andaman and Nicobar Islands', 'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu', 'Delhi',
+  'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry',
+]
+
+// Google Sheets round-trips a plain date string as a full ISO datetime
+// ("2026-08-13T00:00:00.000Z") -- strip it back down to just the date.
+const fmtDate = (d: string) => {
+  if (!d) return '—'
+  const iso = d.match(/^(\d{4})-(\d{2})-(\d{2})T/)
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`
+  return d
+}
 
 const COMPANY_GST = '29AHDPA4964B1ZN'
 const COMPANY_ADDRESS = '175/1, Pavilion Rd,\nJaya Nagar, 1st Block,\nBengaluru 560011'
@@ -90,20 +106,24 @@ type ChallanRow = {
 // ═══════════════════════════════════════════════════════════════════════════
 // TAX / PROFORMA INVOICE
 // ═══════════════════════════════════════════════════════════════════════════
-function InvoiceForm({ docType, onSaved, showToast }: { docType: DocType; onSaved: () => void; showToast: (m: string) => void }) {
-  const [invNo, setInvNo]   = useState(() => getInvNo(docType))
-  useEffect(() => { fetchSheet<InvoiceRow>('Invoices').then(rows => setInvNo(nextInvNo(docType, rows))) }, [docType])
-  const [invDate, setInvDate] = useState(today)
-  const [state, setState]   = useState('Karnataka')
-  const [party, setParty]   = useState('')
-  const [gstin, setGstin]   = useState('')
-  const [billAddr, setBillAddr] = useState('')
-  const [delAddr, setDelAddr]   = useState('')
-  const [clientPhone, setClientPhone] = useState('')
-  const [clientEmail, setClientEmail] = useState('')
-  const [items, setItems]   = useState<Item[]>([newItem(1)])
-  const [nextId, setNextId] = useState(2)
-  const [advancePaid, setAdvancePaid] = useState(0)
+type EditableInvoiceRow = InvoiceRow & { rowIndex: number }
+
+function InvoiceForm({ docType, editing, onSaved, showToast }: { docType: DocType; editing: EditableInvoiceRow | null; onSaved: () => void; showToast: (m: string) => void }) {
+  const editingItems: Item[] = editing ? (() => { try { return JSON.parse(editing.Items || '[]') } catch { return [newItem(1)] } })() : [newItem(1)]
+
+  const [invNo, setInvNo]   = useState(() => editing ? editing['Invoice No'] : getInvNo(docType))
+  useEffect(() => { if (!editing) fetchSheet<InvoiceRow>('Invoices').then(rows => setInvNo(nextInvNo(docType, rows))) }, [docType, editing])
+  const [invDate, setInvDate] = useState(editing ? fmtDate(editing.Date) : today)
+  const [state, setState]   = useState(editing ? (editing.State || 'Karnataka') : 'Karnataka')
+  const [party, setParty]   = useState(editing ? editing.Party : '')
+  const [gstin, setGstin]   = useState(editing ? editing.GSTIN : '')
+  const [billAddr, setBillAddr] = useState(editing ? editing['Billing Address'] : '')
+  const [delAddr, setDelAddr]   = useState(editing ? editing['Delivery Address'] : '')
+  const [clientPhone, setClientPhone] = useState(editing ? editing['Client Phone'] : '')
+  const [clientEmail, setClientEmail] = useState(editing ? editing['Client Email'] : '')
+  const [items, setItems]   = useState<Item[]>(editingItems.length ? editingItems : [newItem(1)])
+  const [nextId, setNextId] = useState(() => Math.max(0, ...editingItems.map(i => i.id)) + 1)
+  const [advancePaid, setAdvancePaid] = useState(editing ? Number(editing['Advance Paid']) || 0 : 0)
   const [saving, setSaving] = useState(false)
   const [showPrint, setShowPrint] = useState(false)
 
@@ -125,6 +145,14 @@ function InvoiceForm({ docType, onSaved, showToast }: { docType: DocType; onSave
   const handleSave = async () => {
     if (!party) return
     setSaving(true)
+    if (editing) {
+      const delResult = await deleteRow('Invoices', editing.rowIndex)
+      if (delResult?.status !== 'ok') {
+        setSaving(false)
+        showToast(`✗ Failed to update: ${delResult?.error || 'unknown error'}`)
+        return
+      }
+    }
     const result = await addRow('Invoices', {
       'Doc Type': docType,
       'Invoice No': invNo,
@@ -144,15 +172,20 @@ function InvoiceForm({ docType, onSaved, showToast }: { docType: DocType; onSave
       'Grand Total': grandTotal.toFixed(2),
       'Advance Paid': advancePaid.toFixed(2),
       'Total Due': totalDue.toFixed(2),
-      Status: docType === 'Tax Invoice' ? (totalDue <= 0 ? 'Paid' : 'Pending') : 'Draft',
+      Status: editing?.Status || (docType === 'Tax Invoice' ? (totalDue <= 0 ? 'Paid' : 'Pending') : 'Draft'),
     })
     setSaving(false)
-    if (result?.status === 'ok') { showToast(`✓ ${invNo} saved for ${party}`); onSaved() }
+    if (result?.status === 'ok') { showToast(`✓ ${invNo} ${editing ? 'updated' : 'saved'} for ${party}`); onSaved() }
     else showToast(`✗ Failed to save: ${result?.error || 'unknown error'}`)
   }
 
   return (
     <div className="space-y-4">
+      {editing && (
+        <div className="bg-brand/5 border border-brand/20 rounded-lg px-3 py-2 text-xs text-brand font-medium">
+          Editing {editing['Doc Type']} {editing['Invoice No']} — changes will update this record.
+        </div>
+      )}
       <div className="card space-y-4">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div>
@@ -296,7 +329,7 @@ function InvoiceForm({ docType, onSaved, showToast }: { docType: DocType; onSave
         <div className="flex items-center gap-2">
           <button onClick={() => setShowPrint(true)} className="btn-outline-gold text-sm">Preview & Print</button>
           <button disabled={!party || saving} onClick={handleSave} className="btn-gold flex items-center gap-1.5 text-sm disabled:opacity-50">
-            <Save size={14} /> {saving ? 'Saving...' : `Save ${docType}`}
+            <Save size={14} /> {saving ? 'Saving...' : editing ? `Update ${docType}` : `Save ${docType}`}
           </button>
         </div>
       </div>
@@ -396,19 +429,34 @@ function InvoicePrintModal({ data, onClose }: { data: any; onClose: () => void }
 // ═══════════════════════════════════════════════════════════════════════════
 // DELIVERY CHALLAN (sample tracking)
 // ═══════════════════════════════════════════════════════════════════════════
-type Sample = { id: number; name: string; qty: string; receiptCondition: string; returnCondition: string; remarks: string }
+type Sample = { id: number; name: string; qty: string; receiptCondition: string; returnCondition: string; remarks: string; image?: string }
 function newSample(id: number): Sample {
   return { id, name: '', qty: '', receiptCondition: '', returnCondition: '', remarks: '' }
 }
 
-function ChallanForm({ onSaved, showToast }: { onSaved: () => void; showToast: (m: string) => void }) {
-  const [challanNo, setChallanNo] = useState(getChallanNo)
-  useEffect(() => { fetchSheet<ChallanRow>('Challans').then(rows => setChallanNo(nextChallanNo(rows))) }, [])
-  const [challanDate, setChallanDate] = useState(today)
-  const [clientProject, setClientProject] = useState('')
-  const [deliveryAddr, setDeliveryAddr]   = useState('')
-  const [clientPhone, setClientPhone]     = useState('')
-  const [clientEmail, setClientEmail]     = useState('')
+// Reads a File as a base64 data URL for inline storage/preview -- no separate
+// file-hosting backend exists, so the image travels with the row as a string.
+function readImageAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+type EditableChallanRow = ChallanRow & { rowIndex: number }
+
+function ChallanForm({ editing, onSaved, showToast }: { editing: EditableChallanRow | null; onSaved: () => void; showToast: (m: string) => void }) {
+  const editingSamples: Sample[] = editing ? (() => { try { return JSON.parse(editing.Samples || '[]') } catch { return [newSample(1)] } })() : [newSample(1)]
+
+  const [challanNo, setChallanNo] = useState(() => editing ? editing['Challan No'] : getChallanNo())
+  useEffect(() => { if (!editing) fetchSheet<ChallanRow>('Challans').then(rows => setChallanNo(nextChallanNo(rows))) }, [editing])
+  const [challanDate, setChallanDate] = useState(editing ? fmtDate(editing.Date) : today)
+  const [clientProject, setClientProject] = useState(editing ? editing['Client / Project Name'] : '')
+  const [deliveryAddr, setDeliveryAddr]   = useState(editing ? editing['Delivery Address & Contact'] : '')
+  const [clientPhone, setClientPhone]     = useState(editing ? editing['Client Phone'] : '')
+  const [clientEmail, setClientEmail]     = useState(editing ? editing['Client Email'] : '')
   const [deliveryMode, setDeliveryMode]   = useState('')
   const [pickupPlace, setPickupPlace]     = useState('')
   const [returnMode, setReturnMode]       = useState('')
@@ -421,9 +469,9 @@ function ChallanForm({ onSaved, showToast }: { onSaved: () => void; showToast: (
   const [dest1, setDest1]                 = useState('')
   const [contact2, setContact2]           = useState('')
   const [dest2, setDest2]                 = useState('')
-  const [samples, setSamples]             = useState<Sample[]>([newSample(1)])
-  const [nextId, setNextId]               = useState(2)
-  const [notes, setNotes]                 = useState('')
+  const [samples, setSamples]             = useState<Sample[]>(editingSamples.length ? editingSamples : [newSample(1)])
+  const [nextId, setNextId]               = useState(() => Math.max(0, ...editingSamples.map(s => s.id)) + 1)
+  const [notes, setNotes]                 = useState(editing ? editing['Notes / Remarks'] || '' : '')
   const [saving, setSaving]               = useState(false)
   const [showPrint, setShowPrint]         = useState(false)
 
@@ -432,10 +480,23 @@ function ChallanForm({ onSaved, showToast }: { onSaved: () => void; showToast: (
   const updateSample = (id: number, field: keyof Sample, value: string) => {
     setSamples(p => p.map(s => s.id !== id ? s : { ...s, [field]: value }))
   }
+  const uploadSampleImage = async (id: number, file: File | undefined) => {
+    if (!file) return
+    const dataUrl = await readImageAsDataUrl(file)
+    updateSample(id, 'image', dataUrl)
+  }
 
   const handleSave = async () => {
     if (!clientProject) return
     setSaving(true)
+    if (editing) {
+      const delResult = await deleteRow('Challans', editing.rowIndex)
+      if (delResult?.status !== 'ok') {
+        setSaving(false)
+        showToast(`✗ Failed to update: ${delResult?.error || 'unknown error'}`)
+        return
+      }
+    }
     const result = await addRow('Challans', {
       'Challan No': challanNo,
       Date: challanDate,
@@ -445,15 +506,20 @@ function ChallanForm({ onSaved, showToast }: { onSaved: () => void; showToast: (
       'Client Email': clientEmail,
       Samples: JSON.stringify(samples),
       'Notes / Remarks': notes,
-      Status: 'Out',
+      Status: editing?.Status || 'Out',
     })
     setSaving(false)
-    if (result?.status === 'ok') { showToast(`✓ ${challanNo} saved`); onSaved() }
+    if (result?.status === 'ok') { showToast(`✓ ${challanNo} ${editing ? 'updated' : 'saved'}`); onSaved() }
     else showToast(`✗ Failed to save: ${result?.error || 'unknown error'}`)
   }
 
   return (
     <div className="space-y-4">
+      {editing && (
+        <div className="bg-brand/5 border border-brand/20 rounded-lg px-3 py-2 text-xs text-brand font-medium">
+          Editing Challan {editing['Challan No']} — changes will update this record.
+        </div>
+      )}
       <div className="card space-y-4">
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           <div>
@@ -514,7 +580,7 @@ function ChallanForm({ onSaved, showToast }: { onSaved: () => void; showToast: (
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
-                {['Sample Name / Image','Quantity','Receipt Condition','Return Condition','Remarks',''].map(h => (
+                {['Sample Name','Image','Quantity','Receipt Condition','Return Condition','Remarks',''].map(h => (
                   <th key={h} className="text-left text-xs font-semibold text-gray-500 px-3 py-2.5 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -523,6 +589,19 @@ function ChallanForm({ onSaved, showToast }: { onSaved: () => void; showToast: (
               {samples.map(s => (
                 <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                   <td className="px-2 py-2 min-w-[160px]"><input value={s.name} onChange={e => updateSample(s.id,'name',e.target.value)} placeholder="Sample name" className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand" /></td>
+                  <td className="px-2 py-2 w-24">
+                    {s.image ? (
+                      <div className="relative w-14 h-14">
+                        <img src={s.image} alt={s.name} className="w-14 h-14 object-cover rounded-lg border border-gray-200" />
+                        <button onClick={() => updateSample(s.id,'image','')} className="absolute -top-1.5 -right-1.5 bg-white rounded-full border border-gray-200 text-gray-400 hover:text-red-400"><X size={12} /></button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center w-14 h-14 border border-dashed border-gray-300 rounded-lg text-gray-300 hover:text-brand hover:border-brand cursor-pointer transition-colors">
+                        <ImageIcon size={16} />
+                        <input type="file" accept="image/*" className="hidden" onChange={e => uploadSampleImage(s.id, e.target.files?.[0])} />
+                      </label>
+                    )}
+                  </td>
                   <td className="px-2 py-2 w-24"><input value={s.qty} onChange={e => updateSample(s.id,'qty',e.target.value)} placeholder="e.g. 2" className="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand" /></td>
                   <td className="px-2 py-2 min-w-[120px]"><input value={s.receiptCondition} onChange={e => updateSample(s.id,'receiptCondition',e.target.value)} className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand" /></td>
                   <td className="px-2 py-2 min-w-[120px]"><input value={s.returnCondition} onChange={e => updateSample(s.id,'returnCondition',e.target.value)} className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand" /></td>
@@ -554,7 +633,7 @@ function ChallanForm({ onSaved, showToast }: { onSaved: () => void; showToast: (
         <div className="flex gap-2">
           <button onClick={() => setShowPrint(true)} className="btn-outline-gold text-sm">Preview & Print</button>
           <button disabled={!clientProject || saving} onClick={handleSave} className="btn-gold flex items-center gap-1.5 text-sm disabled:opacity-50">
-            <Save size={14} /> {saving ? 'Saving...' : 'Save Challan'}
+            <Save size={14} /> {saving ? 'Saving...' : editing ? 'Update Challan' : 'Save Challan'}
           </button>
         </div>
       </div>
@@ -631,7 +710,10 @@ function ChallanPrintModal({ data: d, onClose }: { data: any; onClose: () => voi
             <tbody>
               {d.samples.map((s: Sample) => (
                 <tr key={s.id}>
-                  <td className="border border-gray-200 px-2 py-1.5">{s.name}</td>
+                  <td className="border border-gray-200 px-2 py-1.5">
+                    {s.image && <img src={s.image} alt={s.name} className="w-10 h-10 object-cover rounded mb-1" />}
+                    {s.name}
+                  </td>
                   <td className="border border-gray-200 px-2 py-1.5">{s.qty}</td>
                   <td className="border border-gray-200 px-2 py-1.5">{s.receiptCondition}</td>
                   <td className="border border-gray-200 px-2 py-1.5">{s.returnCondition}</td>
@@ -664,12 +746,18 @@ function ChallanPrintModal({ data: d, onClose }: { data: any; onClose: () => voi
 // ═══════════════════════════════════════════════════════════════════════════
 // LIST
 // ═══════════════════════════════════════════════════════════════════════════
-function InvoiceList({ onNew }: { onNew: () => void }) {
+function InvoiceList({ onNew, onEditInvoice, onEditChallan }: {
+  onNew: () => void
+  onEditInvoice: (r: EditableInvoiceRow) => void
+  onEditChallan: (r: EditableChallanRow) => void
+}) {
   const [invoices, setInvoices] = useState<(InvoiceRow & { rowIndex: number })[]>([])
   const [challans, setChallans] = useState<(ChallanRow & { rowIndex: number })[]>([])
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState('')
   const [deletingRow, setDeletingRow] = useState<string | null>(null)
+  const [viewInvoice, setViewInvoice] = useState<EditableInvoiceRow | null>(null)
+  const [viewChallan, setViewChallan] = useState<EditableChallanRow | null>(null)
 
   const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(''), 3000) }
 
@@ -701,92 +789,121 @@ function InvoiceList({ onNew }: { onNew: () => void }) {
   }
 
   const emailInvoice = (r: InvoiceRow) => {
-    if (!r['Client Email']) { showToast('✗ No email saved for this client — add one when creating the invoice'); return }
+    const to = r['Client Email'] || window.prompt('Client email address to send to:') || ''
+    if (!to) return
     const subject = `${r['Doc Type']} ${r['Invoice No']} from Adora Coatings`
-    const body = `Dear ${r.Party},\n\nPlease find your ${r['Doc Type']} details below.\n\n${r['Doc Type']} No: ${r['Invoice No']}\nDate: ${r.Date}\nGrand Total: ${fmt(Number(r['Grand Total']) || 0)}\n\nThank you,\nAdora Coatings`
-    window.location.href = `mailto:${r['Client Email']}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+    const body = `Dear ${r.Party},\n\nPlease find your ${r['Doc Type']} details below.\n\n${r['Doc Type']} No: ${r['Invoice No']}\nDate: ${fmtDate(r.Date)}\nGrand Total: ${fmt(Number(r['Grand Total']) || 0)}\n\nThank you,\nAdora Coatings`
+    window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
   }
   const emailChallan = (r: ChallanRow) => {
-    if (!r['Client Email']) { showToast('✗ No email saved for this client — add one when creating the challan'); return }
+    const to = r['Client Email'] || window.prompt('Client email address to send to:') || ''
+    if (!to) return
     const subject = `Delivery Challan ${r['Challan No']} from Adora Coatings`
-    const body = `Dear Sir/Madam,\n\nPlease find your delivery challan details below.\n\nChallan No: ${r['Challan No']}\nDate: ${r.Date}\nClient / Project: ${r['Client / Project Name']}\n\nThank you,\nAdora Coatings`
-    window.location.href = `mailto:${r['Client Email']}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+    const body = `Dear Sir/Madam,\n\nPlease find your delivery challan details below.\n\nChallan No: ${r['Challan No']}\nDate: ${fmtDate(r.Date)}\nClient / Project: ${r['Client / Project Name']}\n\nThank you,\nAdora Coatings`
+    window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
   }
 
   const whatsappInvoice = (r: InvoiceRow) => {
-    if (!r['Client Phone']) { showToast('✗ No phone number saved for this client — add one when creating the invoice'); return }
-    const text = `Dear ${r.Party}, please find your ${r['Doc Type']} from Adora Coatings.\n\n${r['Doc Type']} No: ${r['Invoice No']}\nDate: ${r.Date}\nGrand Total: ${fmt(Number(r['Grand Total']) || 0)}\n\nThank you,\nAdora Coatings`
-    window.open(waLink(r['Client Phone'], text), '_blank')
+    const phone = r['Client Phone'] || window.prompt('Client phone number to WhatsApp:') || ''
+    if (!phone) return
+    const text = `Dear ${r.Party}, please find your ${r['Doc Type']} from Adora Coatings.\n\n${r['Doc Type']} No: ${r['Invoice No']}\nDate: ${fmtDate(r.Date)}\nGrand Total: ${fmt(Number(r['Grand Total']) || 0)}\n\nThank you,\nAdora Coatings`
+    window.open(waLink(phone, text), '_blank')
   }
   const whatsappChallan = (r: ChallanRow) => {
-    if (!r['Client Phone']) { showToast('✗ No phone number saved for this client — add one when creating the challan'); return }
-    const text = `Please find your delivery challan from Adora Coatings.\n\nChallan No: ${r['Challan No']}\nDate: ${r.Date}\nClient / Project: ${r['Client / Project Name']}\n\nThank you,\nAdora Coatings`
-    window.open(waLink(r['Client Phone'], text), '_blank')
+    const phone = r['Client Phone'] || window.prompt('Client phone number to WhatsApp:') || ''
+    if (!phone) return
+    const text = `Please find your delivery challan from Adora Coatings.\n\nChallan No: ${r['Challan No']}\nDate: ${fmtDate(r.Date)}\nClient / Project: ${r['Client / Project Name']}\n\nThank you,\nAdora Coatings`
+    window.open(waLink(phone, text), '_blank')
   }
+
+  const taxInvoices = invoices.filter(r => r['Doc Type'] === 'Tax Invoice')
+  const proformas    = invoices.filter(r => r['Doc Type'] === 'Proforma Invoice')
+
+  const InvoiceRows = ({ rows, empty }: { rows: (InvoiceRow & { rowIndex: number })[]; empty: string }) => (
+    <table className="tbl w-full">
+      <thead><tr><th>Invoice #</th><th>Party</th><th>Date</th><th className="text-right">Amount</th><th>Status</th><th>View</th><th>Edit</th><th>Email</th><th>WhatsApp</th><th>Delete</th></tr></thead>
+      <tbody>
+        {loading && <tr><td colSpan={10} className="text-center py-8 text-gray-400">Loading…</td></tr>}
+        {!loading && rows.length === 0 && <tr><td colSpan={10} className="text-center py-8 text-gray-400">{empty}</td></tr>}
+        {rows.map(r => (
+          <tr key={r.rowIndex}>
+            <td className="font-mono text-xs text-brand">{r['Invoice No']}</td>
+            <td className="font-medium text-gray-700">{r.Party}</td>
+            <td className="text-gray-500 text-xs">{fmtDate(r.Date)}</td>
+            <td className="text-right font-semibold text-gray-700">{fmt(Number(r['Grand Total']) || 0)}</td>
+            <td><span className={r.Status === 'Paid' ? 'badge-green' : r.Status === 'Draft' ? 'badge-gray' : 'badge-yellow'}>{r.Status}</span></td>
+            <td>
+              <button onClick={() => setViewInvoice(r)}
+                className="p-1.5 rounded-lg transition-colors hover:bg-brand/10 text-brand" title="View / Print"><Eye size={13}/></button>
+            </td>
+            <td>
+              <button onClick={() => onEditInvoice(r)}
+                className="p-1.5 rounded-lg transition-colors hover:bg-brand/10 text-brand" title="Edit"><Pencil size={13}/></button>
+            </td>
+            <td>
+              <button onClick={() => emailInvoice(r)}
+                className="p-1.5 rounded-lg transition-colors hover:bg-brand/10 text-brand" title={r['Client Email'] ? `Email ${r['Client Email']}` : 'No email saved — you will be asked for one'}><Mail size={13}/></button>
+            </td>
+            <td>
+              <button onClick={() => whatsappInvoice(r)}
+                className="p-1.5 rounded-lg transition-colors hover:bg-green-50 text-green-600" title={r['Client Phone'] ? `WhatsApp ${r['Client Phone']}` : 'No phone number saved — you will be asked for one'}><MessageCircle size={13}/></button>
+            </td>
+            <td>
+              <button onClick={() => delInvoice(r)} disabled={deletingRow === 'inv-' + r.rowIndex}
+                className="p-1.5 rounded-lg transition-colors hover:bg-red-50 text-red-500 disabled:opacity-40"><Trash2 size={13}/></button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div><p className="text-sm text-gray-500">Showing {invoices.length} invoices, {challans.length} challans</p></div>
+        <div><p className="text-sm text-gray-500">Showing {taxInvoices.length} tax invoices, {proformas.length} proforma invoices, {challans.length} challans</p></div>
         <button onClick={onNew} className="btn-gold flex items-center gap-1.5 text-sm"><Plus size={13} /> New Document</button>
       </div>
 
       <div className="card p-0 overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100 font-semibold text-sm text-gray-700">Invoices</div>
-        <div className="overflow-auto max-h-[50vh]">
-          <table className="tbl w-full">
-            <thead><tr><th>Type</th><th>Invoice #</th><th>Party</th><th>Date</th><th className="text-right">Amount</th><th>Status</th><th>Email</th><th>WhatsApp</th><th>Delete</th></tr></thead>
-            <tbody>
-              {loading && <tr><td colSpan={9} className="text-center py-8 text-gray-400">Loading…</td></tr>}
-              {!loading && invoices.length === 0 && <tr><td colSpan={9} className="text-center py-8 text-gray-400">No invoices saved yet</td></tr>}
-              {invoices.map(r => (
-                <tr key={r.rowIndex}>
-                  <td className="text-xs">{r['Doc Type']}</td>
-                  <td className="font-mono text-xs text-brand">{r['Invoice No']}</td>
-                  <td className="font-medium text-gray-700">{r.Party}</td>
-                  <td className="text-gray-500 text-xs">{r.Date}</td>
-                  <td className="text-right font-semibold text-gray-700">{fmt(Number(r['Grand Total']) || 0)}</td>
-                  <td><span className={r.Status === 'Paid' ? 'badge-green' : r.Status === 'Draft' ? 'badge-gray' : 'badge-yellow'}>{r.Status}</span></td>
-                  <td>
-                    <button onClick={() => emailInvoice(r)}
-                      className="p-1.5 rounded-lg transition-colors hover:bg-brand/10 text-brand" title={r['Client Email'] ? `Email ${r['Client Email']}` : 'No email saved for this client'}><Mail size={13}/></button>
-                  </td>
-                  <td>
-                    <button onClick={() => whatsappInvoice(r)}
-                      className="p-1.5 rounded-lg transition-colors hover:bg-green-50 text-green-600" title={r['Client Phone'] ? `WhatsApp ${r['Client Phone']}` : 'No phone number saved for this client'}><MessageCircle size={13}/></button>
-                  </td>
-                  <td>
-                    <button onClick={() => delInvoice(r)} disabled={deletingRow === 'inv-' + r.rowIndex}
-                      className="p-1.5 rounded-lg transition-colors hover:bg-red-50 text-red-500 disabled:opacity-40"><Trash2 size={13}/></button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <div className="px-5 py-3 border-b border-gray-100 font-semibold text-sm text-gray-700">Tax Invoices</div>
+        <div className="overflow-auto max-h-[50vh]"><InvoiceRows rows={taxInvoices} empty="No tax invoices saved yet" /></div>
+      </div>
+
+      <div className="card p-0 overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 font-semibold text-sm text-gray-700">Proforma Invoices</div>
+        <div className="overflow-auto max-h-[50vh]"><InvoiceRows rows={proformas} empty="No proforma invoices saved yet" /></div>
       </div>
 
       <div className="card p-0 overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 font-semibold text-sm text-gray-700">Delivery Challans</div>
         <div className="overflow-auto max-h-[50vh]">
           <table className="tbl w-full">
-            <thead><tr><th>Challan #</th><th>Client / Project</th><th>Date</th><th>Status</th><th>Email</th><th>WhatsApp</th><th>Delete</th></tr></thead>
+            <thead><tr><th>Challan #</th><th>Client / Project</th><th>Date</th><th>Status</th><th>View</th><th>Edit</th><th>Email</th><th>WhatsApp</th><th>Delete</th></tr></thead>
             <tbody>
-              {loading && <tr><td colSpan={7} className="text-center py-8 text-gray-400">Loading…</td></tr>}
-              {!loading && challans.length === 0 && <tr><td colSpan={7} className="text-center py-8 text-gray-400">No challans saved yet</td></tr>}
+              {loading && <tr><td colSpan={9} className="text-center py-8 text-gray-400">Loading…</td></tr>}
+              {!loading && challans.length === 0 && <tr><td colSpan={9} className="text-center py-8 text-gray-400">No challans saved yet</td></tr>}
               {challans.map(r => (
                 <tr key={r.rowIndex}>
                   <td className="font-mono text-xs text-brand">{r['Challan No']}</td>
                   <td className="font-medium text-gray-700">{r['Client / Project Name']}</td>
-                  <td className="text-gray-500 text-xs">{r.Date}</td>
+                  <td className="text-gray-500 text-xs">{fmtDate(r.Date)}</td>
                   <td><span className="badge-blue">{r.Status}</span></td>
                   <td>
+                    <button onClick={() => setViewChallan(r)}
+                      className="p-1.5 rounded-lg transition-colors hover:bg-brand/10 text-brand" title="View / Print"><Eye size={13}/></button>
+                  </td>
+                  <td>
+                    <button onClick={() => onEditChallan(r)}
+                      className="p-1.5 rounded-lg transition-colors hover:bg-brand/10 text-brand" title="Edit"><Pencil size={13}/></button>
+                  </td>
+                  <td>
                     <button onClick={() => emailChallan(r)}
-                      className="p-1.5 rounded-lg transition-colors hover:bg-brand/10 text-brand" title={r['Client Email'] ? `Email ${r['Client Email']}` : 'No email saved for this client'}><Mail size={13}/></button>
+                      className="p-1.5 rounded-lg transition-colors hover:bg-brand/10 text-brand" title={r['Client Email'] ? `Email ${r['Client Email']}` : 'No email saved — you will be asked for one'}><Mail size={13}/></button>
                   </td>
                   <td>
                     <button onClick={() => whatsappChallan(r)}
-                      className="p-1.5 rounded-lg transition-colors hover:bg-green-50 text-green-600" title={r['Client Phone'] ? `WhatsApp ${r['Client Phone']}` : 'No phone number saved for this client'}><MessageCircle size={13}/></button>
+                      className="p-1.5 rounded-lg transition-colors hover:bg-green-50 text-green-600" title={r['Client Phone'] ? `WhatsApp ${r['Client Phone']}` : 'No phone number saved — you will be asked for one'}><MessageCircle size={13}/></button>
                   </td>
                   <td>
                     <button onClick={() => delChallan(r)} disabled={deletingRow === 'ch-' + r.rowIndex}
@@ -798,6 +915,40 @@ function InvoiceList({ onNew }: { onNew: () => void }) {
           </table>
         </div>
       </div>
+
+      {viewInvoice && (() => {
+        let items: Item[] = []
+        try { items = JSON.parse(viewInvoice.Items || '[]') } catch { items = [] }
+        const interState = viewInvoice.State !== 'Karnataka'
+        return (
+          <InvoicePrintModal
+            data={{
+              docType: viewInvoice['Doc Type'], invNo: viewInvoice['Invoice No'], invDate: fmtDate(viewInvoice.Date),
+              party: viewInvoice.Party, gstin: viewInvoice.GSTIN, billAddr: viewInvoice['Billing Address'], delAddr: viewInvoice['Delivery Address'],
+              items, subTotal: Number(viewInvoice['Sub Total']) || 0, cgst: Number(viewInvoice.CGST) || 0, sgst: Number(viewInvoice.SGST) || 0,
+              igst: Number(viewInvoice.IGST) || 0, grandTotal: Number(viewInvoice['Grand Total']) || 0, advancePaid: Number(viewInvoice['Advance Paid']) || 0,
+              totalDue: Number(viewInvoice['Total Due']) || 0, interState,
+            }}
+            onClose={() => setViewInvoice(null)}
+          />
+        )
+      })()}
+
+      {viewChallan && (() => {
+        let samples: Sample[] = []
+        try { samples = JSON.parse(viewChallan.Samples || '[]') } catch { samples = [] }
+        return (
+          <ChallanPrintModal
+            data={{
+              challanNo: viewChallan['Challan No'], challanDate: fmtDate(viewChallan.Date), clientProject: viewChallan['Client / Project Name'],
+              deliveryAddr: viewChallan['Delivery Address & Contact'], deliveryMode: '', pickupPlace: '', returnMode: '', returnPlace: '',
+              deliveryPerson: '', pickupTime: '', returnReceiver: '', returnTime: '', contact1: '', dest1: '', contact2: '', dest2: '',
+              samples, notes: viewChallan['Notes / Remarks'],
+            }}
+            onClose={() => setViewChallan(null)}
+          />
+        )
+      })()}
 
       {toast && (
         <div className="fixed top-4 right-4 z-[9999] bg-brand text-white text-sm px-4 py-3 rounded-xl shadow-lg flex items-center gap-2">
@@ -814,7 +965,11 @@ function InvoiceList({ onNew }: { onNew: () => void }) {
 export default function BillingInvoice() {
   const [tab, setTab] = useState<Tab>('invoice')
   const [toast, setToast] = useState('')
+  const [editingInvoice, setEditingInvoice] = useState<EditableInvoiceRow | null>(null)
+  const [editingChallan, setEditingChallan] = useState<EditableChallanRow | null>(null)
   const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(''), 3000) }
+
+  const goToTab = (t: Tab) => { setEditingInvoice(null); setEditingChallan(null); setTab(t) }
 
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
     { key: 'invoice',  label: 'Tax Invoice',      icon: <FileText size={14} /> },
@@ -836,7 +991,7 @@ export default function BillingInvoice() {
         </div>
         <div className="flex gap-1.5 bg-gray-100 p-1 rounded-xl flex-wrap">
           {tabs.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)}
+            <button key={t.key} onClick={() => goToTab(t.key)}
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
                 tab === t.key ? 'bg-white text-brand shadow-sm' : 'text-gray-500 hover:text-gray-700'
               }`}>
@@ -846,10 +1001,16 @@ export default function BillingInvoice() {
         </div>
       </div>
 
-      {tab === 'invoice'  && <InvoiceForm docType="Tax Invoice" onSaved={() => { setTab('list') }} showToast={showToast} />}
-      {tab === 'proforma' && <InvoiceForm docType="Proforma Invoice" onSaved={() => { setTab('list') }} showToast={showToast} />}
-      {tab === 'challan'  && <ChallanForm onSaved={() => { setTab('list') }} showToast={showToast} />}
-      {tab === 'list'     && <InvoiceList onNew={() => setTab('invoice')} />}
+      {tab === 'invoice'  && <InvoiceForm docType="Tax Invoice" editing={editingInvoice} onSaved={() => { setEditingInvoice(null); setTab('list') }} showToast={showToast} />}
+      {tab === 'proforma' && <InvoiceForm docType="Proforma Invoice" editing={editingInvoice} onSaved={() => { setEditingInvoice(null); setTab('list') }} showToast={showToast} />}
+      {tab === 'challan'  && <ChallanForm editing={editingChallan} onSaved={() => { setEditingChallan(null); setTab('list') }} showToast={showToast} />}
+      {tab === 'list'     && (
+        <InvoiceList
+          onNew={() => goToTab('invoice')}
+          onEditInvoice={r => { setEditingInvoice(r); setTab(r['Doc Type'] === 'Proforma Invoice' ? 'proforma' : 'invoice') }}
+          onEditChallan={r => { setEditingChallan(r); setTab('challan') }}
+        />
+      )}
 
       {toast && (
         <div className="fixed top-4 right-4 z-[9999] bg-brand text-white text-sm px-4 py-3 rounded-xl shadow-lg flex items-center gap-2">

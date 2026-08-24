@@ -243,16 +243,29 @@ export default function Inventory() {
     setForm({ product:'', location:'Godown', qty:'', notes:'' })
   }
 
-  const handleTransfer = () => {
+  // Was local-state-only (setStock with no addRow) -- looked like it worked
+  // for the rest of the session, but vanished on the next sync/reload since
+  // syncFromSheet always rebuilds from the Stock sheet. Persist it the same
+  // way Dispatch/Return do: two signed rows against the two Location buckets
+  // that syncFromSheet already knows how to replay (Godown / Sea Air Logistics).
+  const handleTransfer = async () => {
     if (!transferModal || !transQty) return
     const qty = Number(transQty)
-    setStock(prev => prev.map(s => {
-      if (s.sl !== transferModal.sl) return s
-      if (transDir === 'godown-to-sea') return { ...s, godownQty: s.godownQty - qty, godownKg: s.godownKg - qty, seaAirQty: s.seaAirQty + qty, seaAirKg: s.seaAirKg + qty }
-      return { ...s, seaAirQty: s.seaAirQty - qty, seaAirKg: s.seaAirKg - qty, godownQty: s.godownQty + qty, godownKg: s.godownKg + qty }
-    }))
+    const available = transDir === 'godown-to-sea' ? transferModal.godownQty : transferModal.seaAirQty
+    if (qty > available) {
+      showToast(`✗ Only ${available} units available to transfer`)
+      return
+    }
+    setSaving(true)
+    const fromLocation = transDir === 'godown-to-sea' ? 'Godown' : 'Sea Air Logistics'
+    const toLocation   = transDir === 'godown-to-sea' ? 'Sea Air Logistics' : 'Godown'
+    const date = new Date().toLocaleDateString('en-IN')
+    await addRow('Stock', { Product: transferModal.name, Location: fromLocation, Qty: -qty, Notes: `Transfer to ${toLocation}`, 'Updated By': 'Dashboard', Date: date })
+    await addRow('Stock', { Product: transferModal.name, Location: toLocation, Qty: qty, Notes: `Transfer from ${fromLocation}`, 'Updated By': 'Dashboard', Date: date })
+    setSaving(false)
     showToast(`✓ ${qty} units transferred — ${transDir === 'godown-to-sea' ? 'Godown → Sea Air' : 'Sea Air → Godown'}`)
     setTransferModal(null); setTransQty('')
+    syncFromSheet(true)
   }
 
   const openEdit = (s: StockItem) => {
@@ -684,9 +697,9 @@ export default function Inventory() {
             </div>
             <div className="px-5 pb-5 flex gap-2">
               <button onClick={() => setTransferModal(null)} className="flex-1 btn-outline-gold text-sm">Cancel</button>
-              <button onClick={handleTransfer} disabled={!transQty}
+              <button onClick={handleTransfer} disabled={!transQty || saving}
                 className="flex-1 btn-gold text-sm disabled:opacity-50 flex items-center justify-center gap-1.5">
-                <ArrowRight size={13}/>Transfer
+                <ArrowRight size={13}/>{saving ? 'Transferring...' : 'Transfer'}
               </button>
             </div>
           </div>

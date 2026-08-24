@@ -128,14 +128,20 @@
   /* Table */
   .tbl th { @apply text-left text-xs font-semibold px-4 py-3 whitespace-nowrap border-b sticky top-0 z-10; color: var(--text-3); background-color: var(--bg-card2); border-color: var(--border-2); }
   .tbl td { @apply px-4 py-3 text-sm border-b; color: var(--text-2); border-color: var(--border); }
-  /* table-layout: fixed makes column widths depend only on the <th> widths
-     declared in the header row, not on whatever text happens to be in the
+  /* table-layout: fixed makes column widths depend only on the <col> widths
+     declared in the <colgroup>, not on whatever text happens to be in the
      body -- otherwise every save/delete reflows and resizes every column
      since auto layout re-measures the widest cell in the current data.
-     Opt-in via .tbl-stable (every column must then get an explicit width,
-     see the pages that use it) rather than globally, since other tables
-     haven't been given per-column widths and would just squeeze oddly. */
-  .tbl-stable { table-layout: fixed; }
+     width:100% + every column having an explicit colgroup width makes the
+     browser scale all of them proportionally to fill the card (no dead
+     space on wide screens) while still keeping their relative ratios fixed
+     across re-renders (no reflow on save/delete) -- unlike leaving one
+     column un-widthed, which absorbed 100% of any shortfall by itself and
+     could get squeezed to near nothing.
+     Opt-in via .tbl-stable (every column must then get an explicit
+     <colgroup> width) rather than globally, since other tables haven't
+     been given per-column widths and would just divide space oddly. */
+  .tbl-stable { table-layout: fixed; width: 100%; }
   .tbl-stable th, .tbl-stable td { overflow: hidden; text-overflow: ellipsis; }
   .tbl-stable .tbl-icon-col { width: 52px; }
   .tbl tr:hover td { background-color: rgba(74,124,31,0.04); }

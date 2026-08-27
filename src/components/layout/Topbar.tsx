@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
-import { Menu, Bell, Search, Sun, Moon, Package, X } from 'lucide-react'
+import { Menu, Bell, Search, Sun, Moon, Package, X, Languages } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useDarkMode } from '@/hooks/useDarkMode'
+import { useLanguage } from '@/hooks/useLanguage'
+import { LANGUAGES } from '@/lib/translations'
 
 const NOTIFICATIONS: { id: number; type: string; icon: typeof Package; color: string; bg: string; title: string; msg: string; time: string; unread: boolean }[] = []
 
@@ -10,16 +12,21 @@ interface Props { onMenu: () => void; title: string }
 export default function Topbar({ onMenu, title }: Props) {
   const { user }              = useAuth()
   const { dark, toggle }      = useDarkMode()
+  const { lang, setLang }     = useLanguage()
   const [notifOpen, setNotifOpen] = useState(false)
+  const [langOpen, setLangOpen]   = useState(false)
   const [notifs, setNotifs]   = useState(NOTIFICATIONS)
   const ref = useRef<HTMLDivElement>(null)
+  const langRef = useRef<HTMLDivElement>(null)
 
   const unreadCount = notifs.filter(n => n.unread).length
+  const currentLang = LANGUAGES.find(l => l.code === lang) ?? LANGUAGES[0]
 
   // Close dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setNotifOpen(false)
+      if (langRef.current && !langRef.current.contains(e.target as Node)) setLangOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -50,6 +57,32 @@ export default function Topbar({ onMenu, title }: Props) {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
+
+        {/* Language switcher */}
+        <div className="relative" ref={langRef}>
+          <button onClick={() => setLangOpen(o => !o)} title="Change language"
+            className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg transition-colors text-xs font-semibold"
+            style={{ color: langOpen ? '#4a7c1f' : 'var(--text-3)', background: langOpen ? '#f2f9e8' : 'transparent' }}>
+            <Languages size={16} />
+            <span className="hidden sm:inline">{currentLang.native}</span>
+          </button>
+          {langOpen && (
+            <div className="absolute right-0 top-10 w-40 rounded-xl overflow-hidden z-50 shadow-2xl"
+              style={{ background: 'var(--bg-card)', border: '1px solid var(--border-2)' }}>
+              {LANGUAGES.map(l => (
+                <button key={l.code} onClick={() => { setLang(l.code); setLangOpen(false) }}
+                  className="w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between"
+                  style={{
+                    color: l.code === lang ? '#4a7c1f' : 'var(--text-2)',
+                    background: l.code === lang ? (dark ? 'rgba(74,124,31,0.15)' : '#f2f9e8') : 'transparent',
+                    fontWeight: l.code === lang ? 600 : 400,
+                  }}>
+                  {l.native}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Dark / Light toggle */}
         <button onClick={toggle} title={dark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}

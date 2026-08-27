@@ -1,5 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
+import { useLanguage } from '@/hooks/useLanguage'
+import type { TranslationKey } from '@/lib/translations'
 import {
   LayoutDashboard, Package, Image, Users,
   ShoppingCart, TrendingUp, Settings, LogOut, X,
@@ -8,29 +10,30 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const NAV = [
-  { to: '/',                 icon: LayoutDashboard, label: 'Dashboard'            },
-  { to: '/products',         icon: Package,         label: 'Products'             },
-  { to: '/inventory',        icon: Warehouse,       label: 'Stock & Inventory'    },
-  { to: '/portfolio',        icon: Image,           label: 'Portfolio'            },
-  { to: '/quotation',        icon: FileText,        label: 'Quotation'            },
-  { to: '/billing',          icon: Receipt,         label: 'Billing / Invoice'    },
-  { to: '/leads',            icon: Users,           label: 'Lead Generation'      },
-  { to: '/clients',          icon: Building2,       label: 'B2B & B2C Clients'    },
-  { to: '/sales-reports',    icon: TrendingUp,      label: 'Sales Reports'        },
-  { to: '/purchase-reports', icon: ShoppingBag,     label: 'Purchase Reports'     },
-  { to: '/outstanding',      icon: CreditCard,      label: 'Outstanding'          },
-  { to: '/profit-loss',      icon: BarChart2,       label: 'Profit & Loss'        },
-  { to: '/gst-reports',      icon: FileSpreadsheet, label: 'GST Reports'          },
-  { to: '/user-management',  icon: UserCog,         label: 'User Management'      },
-  { to: '/orders',           icon: ShoppingCart,    label: 'Orders'               },
-  { to: '/settings',         icon: Settings,        label: 'Settings'             },
+const NAV: { to: string; icon: typeof LayoutDashboard; labelKey: TranslationKey }[] = [
+  { to: '/',                 icon: LayoutDashboard, labelKey: 'nav.dashboard'       },
+  { to: '/products',         icon: Package,         labelKey: 'nav.products'        },
+  { to: '/inventory',        icon: Warehouse,       labelKey: 'nav.inventory'       },
+  { to: '/portfolio',        icon: Image,           labelKey: 'nav.portfolio'       },
+  { to: '/quotation',        icon: FileText,        labelKey: 'nav.quotation'       },
+  { to: '/billing',          icon: Receipt,         labelKey: 'nav.billing'         },
+  { to: '/leads',            icon: Users,           labelKey: 'nav.leads'           },
+  { to: '/clients',          icon: Building2,       labelKey: 'nav.clients'         },
+  { to: '/sales-reports',    icon: TrendingUp,      labelKey: 'nav.salesReports'    },
+  { to: '/purchase-reports', icon: ShoppingBag,     labelKey: 'nav.purchaseReports' },
+  { to: '/outstanding',      icon: CreditCard,      labelKey: 'nav.outstanding'     },
+  { to: '/profit-loss',      icon: BarChart2,       labelKey: 'nav.profitLoss'      },
+  { to: '/gst-reports',      icon: FileSpreadsheet, labelKey: 'nav.gstReports'      },
+  { to: '/user-management',  icon: UserCog,         labelKey: 'nav.userManagement'  },
+  { to: '/orders',           icon: ShoppingCart,    labelKey: 'nav.orders'          },
+  { to: '/settings',         icon: Settings,        labelKey: 'nav.settings'        },
 ]
 
 interface Props { open: boolean; onClose: () => void }
 
 export default function Sidebar({ open, onClose }: Props) {
   const { user, logout } = useAuth()
+  const { t } = useLanguage()
   const navigate = useNavigate()
   const handleLogout = () => { logout(); navigate('/login') }
 
@@ -68,7 +71,7 @@ export default function Sidebar({ open, onClose }: Props) {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-3 overflow-y-auto space-y-0.5">
-          {NAV.map(({ to, icon: Icon, label }) => (
+          {NAV.map(({ to, icon: Icon, labelKey }) => (
             <NavLink
               key={to}
               to={to}
@@ -77,7 +80,7 @@ export default function Sidebar({ open, onClose }: Props) {
               className={({ isActive }) => cn('nav-link', isActive && 'active')}
             >
               <Icon size={15} />
-              {label}
+              {t(labelKey)}
             </NavLink>
           ))}
         </nav>
@@ -95,7 +98,7 @@ export default function Sidebar({ open, onClose }: Props) {
           </div>
           <button onClick={handleLogout}
             className="nav-link w-full text-red-400 hover:text-red-600 hover:bg-red-50">
-            <LogOut size={14} /> Sign Out
+            <LogOut size={14} /> {t('nav.signOut')}
           </button>
         </div>
 

@@ -1,6 +1,7 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from '@/hooks/useAuth'
 import { DarkModeProvider } from '@/hooks/useDarkMode'
+import { LanguageProvider } from '@/hooks/useLanguage'
 import DashboardLayout   from '@/components/layout/DashboardLayout'
 import Login             from '@/pages/Login'
 import Dashboard         from '@/pages/Dashboard'
@@ -63,9 +64,11 @@ export default function App() {
   return (
     <HashRouter>
       <DarkModeProvider>
+      <LanguageProvider>
       <AuthProvider>
         <AppRoutes />
       </AuthProvider>
+      </LanguageProvider>
       </DarkModeProvider>
     </HashRouter>
   )

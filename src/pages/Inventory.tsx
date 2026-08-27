@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Search, Warehouse, Package2, AlertCircle, Plus, X, CheckCheck, ArrowRight, RotateCcw, Truck, RefreshCw, Trash2, Pencil } from 'lucide-react'
 import { addRow, fetchSheet, deleteRow } from '../lib/api'
+import { useLanguage } from '../hooks/useLanguage'
 
 type StockLogRow = { Product: string; Location: string; Qty: number | string; Notes?: string; 'Updated By'?: string; Date?: string }
 type StockLogEntry = StockLogRow & { rowIndex: number }
@@ -105,6 +106,7 @@ const INITIAL_STOCK: StockItem[] = [
 type Tab = 'stock' | 'addProduct' | 'dispatch' | 'return'
 
 export default function Inventory() {
+  const { t } = useLanguage()
   const [stock, setStock]       = useState<StockItem[]>(INITIAL_STOCK)
   const [search, setSearch]     = useState('')
   const [filter, setFilter]     = useState<'all'|'godown'|'seaair'|'low'>('all')
@@ -327,10 +329,10 @@ export default function Inventory() {
   }
 
   const STATUS = (s: StockItem) => {
-    const t = s.godownKg + s.seaAirKg
-    if (t === 0) return { label:'Out of Stock', cls:'badge-red' }
-    if (t <= 5)  return { label:'Low Stock',    cls:'badge-yellow' }
-    return               { label:'In Stock',    cls:'badge-green' }
+    const total = s.godownKg + s.seaAirKg
+    if (total === 0) return { label: t('inv.outOfStock'), cls:'badge-red' }
+    if (total <= 5)  return { label: t('inv.lowStock'),   cls:'badge-yellow' }
+    return                  { label: t('inv.inStock'),    cls:'badge-green' }
   }
 
   return (
@@ -346,10 +348,10 @@ export default function Inventory() {
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label:'Total Products', val: stock.length,  icon: Warehouse,  border:'border-brand',    addLocation: null },
-          { label:'Godown Stock',   val:`${totalGodown.toFixed(0)} kg/L`, icon: Package2, border:'border-blue-500',   addLocation: 'Godown' },
-          { label:'Sea Air Stock',  val:`${totalSea.toFixed(0)} kg/L`,    icon: Package2, border:'border-purple-500', addLocation: 'Sea Air Logistics' },
-          { label:'Out of Stock',   val: outOfStock,    icon: AlertCircle,border:'border-red-500',   addLocation: null },
+          { label: t('inv.totalProducts'), val: stock.length,  icon: Warehouse,  border:'border-brand',    addLocation: null },
+          { label: t('inv.godownStock'),   val:`${totalGodown.toFixed(0)} kg/L`, icon: Package2, border:'border-blue-500',   addLocation: 'Godown' },
+          { label: t('inv.seaAirStock'),   val:`${totalSea.toFixed(0)} kg/L`,    icon: Package2, border:'border-purple-500', addLocation: 'Sea Air Logistics' },
+          { label: t('inv.outOfStock'),    val: outOfStock,    icon: AlertCircle,border:'border-red-500',   addLocation: null },
         ].map(k => (
           <div key={k.label} className={`card border-l-4 ${k.border} relative`}>
             <div className="flex items-center gap-3">
@@ -370,16 +372,16 @@ export default function Inventory() {
       <div className="card !p-0 overflow-visible">
         <div className="flex border-b overflow-x-auto" style={{borderColor:'var(--border-2)'}}>
           {([
-            { id:'stock',      label:'Stock Overview',  icon: Warehouse  },
-            { id:'addProduct', label:'Add Product',     icon: Plus       },
-            { id:'dispatch',   label:'Dispatch',        icon: Truck      },
-            { id:'return',     label:'Product Return',  icon: RotateCcw  },
-          ] as const).map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
+            { id:'stock',      label: t('inv.stockOverview'),  icon: Warehouse  },
+            { id:'addProduct', label: t('inv.addProduct'),     icon: Plus       },
+            { id:'dispatch',   label: t('inv.dispatch'),       icon: Truck      },
+            { id:'return',     label: t('inv.productReturn'),  icon: RotateCcw  },
+          ] as const).map(tabItem => (
+            <button key={tabItem.id} onClick={() => setTab(tabItem.id)}
               className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors shrink-0 ${
-                tab === t.id ? 'border-brand text-brand' : 'border-transparent'
-              }`} style={{color: tab === t.id ? '#4a7c1f' : 'var(--text-3)'}}>
-              <t.icon size={14}/>{t.label}
+                tab === tabItem.id ? 'border-brand text-brand' : 'border-transparent'
+              }`} style={{color: tab === tabItem.id ? '#4a7c1f' : 'var(--text-3)'}}>
+              <tabItem.icon size={14}/>{tabItem.label}
             </button>
           ))}
         </div>
@@ -390,7 +392,7 @@ export default function Inventory() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
               <div className="relative flex-1 w-full">
                 <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{color:'var(--text-4)'}} />
-                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search product…" className="input-dark pl-9 w-full" />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('inv.searchProduct')} className="input-dark pl-9 w-full" />
               </div>
               <div className="flex gap-1.5 flex-wrap">
                 {([['all','All'],['godown','Godown'],['seaair','Sea Air'],['low',`Low (${lowStock})`]] as const).map(([id,label]) => (
@@ -408,7 +410,7 @@ export default function Inventory() {
                 {syncing ? 'Syncing…' : lastSynced ? `Synced ${lastSynced}` : 'Sync'}
               </button>
               <button onClick={() => setAddModal(true)} className="btn-gold flex items-center gap-1.5 text-xs shrink-0">
-                <Plus size={13}/> Add Stock
+                <Plus size={13}/> {t('inv.addStock')}
               </button>
             </div>
 
@@ -423,19 +425,19 @@ export default function Inventory() {
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>Product Name</th>
-                    <th>Pack Size</th>
-                    <th className="text-center" style={{background:'rgba(139,92,246,0.06)'}}>Sea Air Qty</th>
-                    <th className="text-center" style={{background:'rgba(139,92,246,0.06)'}}>Sea Air Kg/L</th>
-                    <th className="text-center" style={{background:'rgba(59,130,246,0.06)'}}>Godown Qty</th>
-                    <th className="text-center" style={{background:'rgba(59,130,246,0.06)'}}>Godown Kg/L</th>
-                    <th className="text-center" style={{background:'rgba(239,68,68,0.06)'}}>Dispatch</th>
-                    <th className="text-center" style={{background:'rgba(16,185,129,0.06)'}}>Product Return</th>
-                    <th className="text-center font-bold">Total Kg/L</th>
-                    <th className="text-center">Status</th>
-                    <th className="text-center tbl-icon-col whitespace-normal leading-tight">Transfer</th>
-                    <th className="text-center tbl-icon-col whitespace-normal leading-tight">Edit</th>
-                    <th className="text-center tbl-icon-col whitespace-normal leading-tight">Delete</th>
+                    <th>{t('inv.productName')}</th>
+                    <th>{t('inv.packSize')}</th>
+                    <th className="text-center" style={{background:'rgba(139,92,246,0.06)'}}>{t('inv.seaAirQty')}</th>
+                    <th className="text-center" style={{background:'rgba(139,92,246,0.06)'}}>{t('inv.seaAirKgL')}</th>
+                    <th className="text-center" style={{background:'rgba(59,130,246,0.06)'}}>{t('inv.godownQty')}</th>
+                    <th className="text-center" style={{background:'rgba(59,130,246,0.06)'}}>{t('inv.godownKgL')}</th>
+                    <th className="text-center" style={{background:'rgba(239,68,68,0.06)'}}>{t('inv.dispatch')}</th>
+                    <th className="text-center" style={{background:'rgba(16,185,129,0.06)'}}>{t('inv.productReturn')}</th>
+                    <th className="text-center font-bold">{t('inv.totalKgL')}</th>
+                    <th className="text-center">{t('common.status')}</th>
+                    <th className="text-center tbl-icon-col whitespace-normal leading-tight">{t('inv.transfer')}</th>
+                    <th className="text-center tbl-icon-col whitespace-normal leading-tight">{t('common.edit')}</th>
+                    <th className="text-center tbl-icon-col whitespace-normal leading-tight">{t('common.delete')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -482,7 +484,7 @@ export default function Inventory() {
 
             {/* Recent Stock Entries — movement log, with delete for mistakes */}
             <div>
-              <p className="text-sm font-semibold mb-2" style={{color:'var(--text-1)'}}>Recent Stock Entries</p>
+              <p className="text-sm font-semibold mb-2" style={{color:'var(--text-1)'}}>{t('inv.recentEntries')}</p>
               <div className="overflow-auto max-h-[65vh] rounded-xl border" style={{borderColor:'var(--border-2)'}}>
                 <table className="tbl tbl-stable">
                   <colgroup>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus, Trash2, Save, FileText, FileSpreadsheet, List, Truck, CheckCheck, Mail, MessageCircle, Pencil, Eye, Image as ImageIcon, X } from 'lucide-react'
 import { fetchSheet, addRow, deleteRow } from '../lib/api'
+import { useLanguage } from '../hooks/useLanguage'
 
 type Item = { id: number; particulars: string; qty: number; unit: string; rate: number }
 type Tab = 'invoice' | 'proforma' | 'challan' | 'list'
@@ -751,6 +752,7 @@ function InvoiceList({ onNew, onEditInvoice, onEditChallan }: {
   onEditInvoice: (r: EditableInvoiceRow) => void
   onEditChallan: (r: EditableChallanRow) => void
 }) {
+  const { t } = useLanguage()
   const [invoices, setInvoices] = useState<(InvoiceRow & { rowIndex: number })[]>([])
   const [challans, setChallans] = useState<(ChallanRow & { rowIndex: number })[]>([])
   const [loading, setLoading] = useState(false)
@@ -825,9 +827,9 @@ function InvoiceList({ onNew, onEditInvoice, onEditChallan }: {
         <col style={{width:150}} /><col style={{width:200}} /><col style={{width:100}} /><col style={{width:120}} /><col style={{width:90}} />
         <col style={{width:52}} /><col style={{width:52}} /><col style={{width:52}} /><col style={{width:52}} /><col style={{width:52}} />
       </colgroup>
-      <thead><tr><th>Invoice #</th><th>Party</th><th>Date</th><th className="text-right">Amount</th><th>Status</th><th className="tbl-icon-col whitespace-normal leading-tight">View</th><th className="tbl-icon-col whitespace-normal leading-tight">Edit</th><th className="tbl-icon-col whitespace-normal leading-tight">Email</th><th className="tbl-icon-col whitespace-normal leading-tight">WhatsApp</th><th className="tbl-icon-col whitespace-normal leading-tight">Delete</th></tr></thead>
+      <thead><tr><th>{t('bill.invoiceNo')}</th><th>{t('bill.party')}</th><th>{t('common.date')}</th><th className="text-right">{t('bill.amount')}</th><th>{t('common.status')}</th><th className="tbl-icon-col whitespace-normal leading-tight">{t('bill.view')}</th><th className="tbl-icon-col whitespace-normal leading-tight">{t('common.edit')}</th><th className="tbl-icon-col whitespace-normal leading-tight">{t('quo.email')}</th><th className="tbl-icon-col whitespace-normal leading-tight">{t('quo.whatsapp')}</th><th className="tbl-icon-col whitespace-normal leading-tight">{t('common.delete')}</th></tr></thead>
       <tbody>
-        {loading && <tr><td colSpan={10} className="text-center py-8 text-gray-400">Loading…</td></tr>}
+        {loading && <tr><td colSpan={10} className="text-center py-8 text-gray-400">{t('quo.loading')}</td></tr>}
         {!loading && rows.length === 0 && <tr><td colSpan={10} className="text-center py-8 text-gray-400">{empty}</td></tr>}
         {rows.map(r => (
           <tr key={r.rowIndex}>
@@ -866,30 +868,30 @@ function InvoiceList({ onNew, onEditInvoice, onEditChallan }: {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div><p className="text-sm text-gray-500">Showing {taxInvoices.length} tax invoices, {proformas.length} proforma invoices, {challans.length} challans</p></div>
-        <button onClick={onNew} className="btn-gold flex items-center gap-1.5 text-sm"><Plus size={13} /> New Document</button>
+        <button onClick={onNew} className="btn-gold flex items-center gap-1.5 text-sm"><Plus size={13} /> {t('bill.newDocument')}</button>
       </div>
 
       <div className="card p-0 overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100 font-semibold text-sm text-gray-700">Tax Invoices</div>
+        <div className="px-5 py-3 border-b border-gray-100 font-semibold text-sm text-gray-700">{t('bill.taxInvoices')}</div>
         <div className="overflow-auto max-h-[50vh]"><InvoiceRows rows={taxInvoices} empty="No tax invoices saved yet" /></div>
       </div>
 
       <div className="card p-0 overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100 font-semibold text-sm text-gray-700">Proforma Invoices</div>
+        <div className="px-5 py-3 border-b border-gray-100 font-semibold text-sm text-gray-700">{t('bill.proformaInvoices')}</div>
         <div className="overflow-auto max-h-[50vh]"><InvoiceRows rows={proformas} empty="No proforma invoices saved yet" /></div>
       </div>
 
       <div className="card p-0 overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100 font-semibold text-sm text-gray-700">Delivery Challans</div>
+        <div className="px-5 py-3 border-b border-gray-100 font-semibold text-sm text-gray-700">{t('bill.deliveryChallans')}</div>
         <div className="overflow-auto max-h-[50vh]">
           <table className="tbl tbl-stable">
             <colgroup>
               <col style={{width:150}} /><col style={{width:200}} /><col style={{width:100}} /><col style={{width:90}} />
               <col style={{width:52}} /><col style={{width:52}} /><col style={{width:52}} /><col style={{width:52}} /><col style={{width:52}} />
             </colgroup>
-            <thead><tr><th>Challan #</th><th>Client / Project</th><th>Date</th><th>Status</th><th className="tbl-icon-col whitespace-normal leading-tight">View</th><th className="tbl-icon-col whitespace-normal leading-tight">Edit</th><th className="tbl-icon-col whitespace-normal leading-tight">Email</th><th className="tbl-icon-col whitespace-normal leading-tight">WhatsApp</th><th className="tbl-icon-col whitespace-normal leading-tight">Delete</th></tr></thead>
+            <thead><tr><th>{t('bill.challanNo')}</th><th>{t('bill.clientProject')}</th><th>{t('common.date')}</th><th>{t('common.status')}</th><th className="tbl-icon-col whitespace-normal leading-tight">{t('bill.view')}</th><th className="tbl-icon-col whitespace-normal leading-tight">{t('common.edit')}</th><th className="tbl-icon-col whitespace-normal leading-tight">{t('quo.email')}</th><th className="tbl-icon-col whitespace-normal leading-tight">{t('quo.whatsapp')}</th><th className="tbl-icon-col whitespace-normal leading-tight">{t('common.delete')}</th></tr></thead>
             <tbody>
-              {loading && <tr><td colSpan={9} className="text-center py-8 text-gray-400">Loading…</td></tr>}
+              {loading && <tr><td colSpan={9} className="text-center py-8 text-gray-400">{t('quo.loading')}</td></tr>}
               {!loading && challans.length === 0 && <tr><td colSpan={9} className="text-center py-8 text-gray-400">No challans saved yet</td></tr>}
               {challans.map(r => (
                 <tr key={r.rowIndex}>
@@ -971,39 +973,40 @@ function InvoiceList({ onNew, onEditInvoice, onEditChallan }: {
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════════════════════════
 export default function BillingInvoice() {
+  const { t } = useLanguage()
   const [tab, setTab] = useState<Tab>('invoice')
   const [toast, setToast] = useState('')
   const [editingInvoice, setEditingInvoice] = useState<EditableInvoiceRow | null>(null)
   const [editingChallan, setEditingChallan] = useState<EditableChallanRow | null>(null)
   const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(''), 3000) }
 
-  const goToTab = (t: Tab) => { setEditingInvoice(null); setEditingChallan(null); setTab(t) }
+  const goToTab = (tabKey: Tab) => { setEditingInvoice(null); setEditingChallan(null); setTab(tabKey) }
 
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
-    { key: 'invoice',  label: 'Tax Invoice',      icon: <FileText size={14} /> },
-    { key: 'proforma', label: 'Proforma Invoice', icon: <FileSpreadsheet size={14} /> },
-    { key: 'challan',  label: 'Challan',          icon: <Truck    size={14} /> },
-    { key: 'list',     label: 'Document List',    icon: <List size={14} /> },
+    { key: 'invoice',  label: t('bill.taxInvoice'),      icon: <FileText size={14} /> },
+    { key: 'proforma', label: t('bill.proformaInvoice'), icon: <FileSpreadsheet size={14} /> },
+    { key: 'challan',  label: t('bill.challan'),         icon: <Truck    size={14} /> },
+    { key: 'list',     label: t('bill.documentList'),    icon: <List size={14} /> },
   ]
 
   const titles: Record<Tab, string> = {
-    invoice: 'Tax Invoice', proforma: 'Proforma Invoice', challan: 'Delivery Challan', list: 'Document List',
+    invoice: t('bill.taxInvoice'), proforma: t('bill.proformaInvoice'), challan: t('bill.challan'), list: t('bill.documentList'),
   }
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-800">Billing — {titles[tab]}</h1>
+          <h1 className="text-xl font-bold text-gray-800">{t('bill.title')} — {titles[tab]}</h1>
           <p className="text-xs text-gray-400 mt-0.5">GST Tax Invoice, Proforma Invoice & Delivery Challan</p>
         </div>
         <div className="flex gap-1.5 bg-gray-100 p-1 rounded-xl flex-wrap">
-          {tabs.map(t => (
-            <button key={t.key} onClick={() => goToTab(t.key)}
+          {tabs.map(tabDef => (
+            <button key={tabDef.key} onClick={() => goToTab(tabDef.key)}
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
-                tab === t.key ? 'bg-white text-brand shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                tab === tabDef.key ? 'bg-white text-brand shadow-sm' : 'text-gray-500 hover:text-gray-700'
               }`}>
-              {t.icon} {t.label}
+              {tabDef.icon} {tabDef.label}
             </button>
           ))}
         </div>

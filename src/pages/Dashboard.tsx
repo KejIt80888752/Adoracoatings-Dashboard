@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { TrendingUp, Package, Users, IndianRupee, AlertTriangle, CheckCircle2, ArrowUpRight } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
 import { fetchSheet } from '../lib/api'
+import { useLanguage } from '../hooks/useLanguage'
 
 const fmt = (n: number) => '₹' + Math.round(n).toLocaleString('en-IN')
 
@@ -34,6 +35,7 @@ const tipStyle = { backgroundColor: '#fff', border: '1px solid #e5e7eb', borderR
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
 export default function Dashboard() {
+  const { t } = useLanguage()
   const [invoices, setInvoices] = useState<InvoiceRow[]>([])
   const [quotes, setQuotes] = useState<QuoteRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -57,10 +59,10 @@ export default function Dashboard() {
   const activeProjects = quotes.filter(q => q.Status !== 'Completed').length
 
   const STATS = [
-    { label: 'Total Revenue',   val: fmt(totalRevenue),   sub: `${taxInvoices.length} invoice${taxInvoices.length===1?'':'s'}`, icon: IndianRupee, color: 'text-brand'       },
-    { label: 'Gross Profit',    val: fmt(grossProfit),    sub: 'Revenue less GST',                                              icon: TrendingUp,  color: 'text-green-500'  },
-    { label: 'Total Collected', val: fmt(totalCollected), sub: 'Incl. advances',                                                icon: Package,     color: 'text-blue-500'   },
-    { label: 'Active Projects', val: String(activeProjects), sub: 'FY 2026–27',                                                 icon: Users,       color: 'text-purple-500' },
+    { label: t('dash.totalRevenue'),   val: fmt(totalRevenue),   sub: `${taxInvoices.length} ${t(taxInvoices.length===1 ? 'dash.invoice' : 'dash.invoices')}`, icon: IndianRupee, color: 'text-brand'       },
+    { label: t('dash.grossProfit'),    val: fmt(grossProfit),    sub: t('dash.revenueLessGst'),                                              icon: TrendingUp,  color: 'text-green-500'  },
+    { label: t('dash.totalCollected'), val: fmt(totalCollected), sub: t('dash.inclAdvances'),                                                icon: Package,     color: 'text-blue-500'   },
+    { label: t('dash.activeProjects'), val: String(activeProjects), sub: 'FY 2026–27',                                                        icon: Users,       color: 'text-purple-500' },
   ]
 
   // Monthly Revenue & Profit -- group Tax Invoices by calendar month.
@@ -101,10 +103,10 @@ export default function Dashboard() {
 
   const overdue = taxInvoices.filter(r => (Number(r['Total Due']) || 0) > 0)
   const alerts = overdue.slice(0, 4).map(r => ({
-    msg: `${r.Party || r['Invoice No']} has ${fmt(Number(r['Total Due']) || 0)} due on ${r['Invoice No']}`,
+    msg: `${r.Party || r['Invoice No']} ${t('dash.hasDueOn', { amt: fmt(Number(r['Total Due']) || 0), inv: r['Invoice No'] })}`,
     warn: true,
   }))
-  if (alerts.length === 0 && taxInvoices.length > 0) alerts.push({ msg: 'All invoices fully collected', warn: false })
+  if (alerts.length === 0 && taxInvoices.length > 0) alerts.push({ msg: t('dash.allCollected'), warn: false })
 
   return (
     <div className="space-y-5">
@@ -127,7 +129,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="card xl:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <div><p className="section-title text-base">Monthly Revenue & Profit</p><p className="section-sub">FY 2026–27</p></div>
+            <div><p className="section-title text-base">{t('dash.monthlyRevenueProfit')}</p><p className="section-sub">FY 2026–27</p></div>
             <span className="badge-gold">FY 2026-27</span>
           </div>
           <ResponsiveContainer width="100%" height={210}>
@@ -153,8 +155,8 @@ export default function Dashboard() {
         </div>
 
         <div className="card">
-          <p className="section-title text-base mb-1">Expense Breakdown</p>
-          <p className="section-sub mb-4">Total FY 2026–27</p>
+          <p className="section-title text-base mb-1">{t('dash.expenseBreakdown')}</p>
+          <p className="section-sub mb-4">{t('dash.totalFY')}</p>
           <ResponsiveContainer width="100%" height={210}>
             <BarChart data={expenseData} barSize={24}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -171,9 +173,9 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         {/* Top projects */}
         <div className="card xl:col-span-2">
-          <p className="section-title text-base mb-4">Top Projects by Revenue</p>
+          <p className="section-title text-base mb-4">{t('dash.topProjectsByRevenue')}</p>
           <div className="space-y-3.5">
-            {!loading && topProjects.length === 0 && <p className="text-sm text-gray-400 text-center py-6">No projects yet</p>}
+            {!loading && topProjects.length === 0 && <p className="text-sm text-gray-400 text-center py-6">{t('dash.noProjectsYet')}</p>}
             {topProjects.map((p, i) => {
               const pct = Math.round((p.value / topProjects[0].value) * 100)
               return (
@@ -200,9 +202,9 @@ export default function Dashboard() {
         <div className="space-y-4">
           {/* Alerts */}
           <div className="card">
-            <p className="section-title text-sm mb-3">Alerts</p>
+            <p className="section-title text-sm mb-3">{t('dash.alerts')}</p>
             <ul className="space-y-2.5">
-              {!loading && alerts.length === 0 && <li className="text-xs text-gray-400 text-center py-2">No alerts</li>}
+              {!loading && alerts.length === 0 && <li className="text-xs text-gray-400 text-center py-2">{t('dash.noAlerts')}</li>}
               {alerts.map((a, i) => (
                 <li key={i} className="flex items-start gap-2 text-xs text-gray-500">
                   {a.warn
@@ -217,13 +219,13 @@ export default function Dashboard() {
           {/* Recent projects */}
           <div className="card">
             <div className="flex items-center justify-between mb-3">
-              <p className="section-title text-sm">Recent Projects</p>
+              <p className="section-title text-sm">{t('dash.recentProjects')}</p>
               <a href="#/billing" className="text-xs text-brand hover:text-brand-light flex items-center gap-0.5">
-                View all <ArrowUpRight size={11} />
+                {t('dash.viewAll')} <ArrowUpRight size={11} />
               </a>
             </div>
             <div className="space-y-2.5">
-              {!loading && recentProjects.length === 0 && <p className="text-xs text-gray-400 text-center py-2">No recent projects</p>}
+              {!loading && recentProjects.length === 0 && <p className="text-xs text-gray-400 text-center py-2">{t('dash.noRecentProjects')}</p>}
               {recentProjects.map((p, i) => (
                 <div key={p.name + i} className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center text-brand text-xs font-bold shrink-0">

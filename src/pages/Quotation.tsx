@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus, Trash2, CheckCheck, FileText, List, FileSignature, Pencil, Mail, MessageCircle } from 'lucide-react'
 import { fetchSheet, addRow, deleteRow } from '../lib/api'
+import { useLanguage } from '../hooks/useLanguage'
 
 const fmt = (n: number) => '₹' + n.toLocaleString('en-IN')
 
@@ -147,6 +148,7 @@ const area = (it: Item) => it.areaOverride != null ? it.areaOverride : Math.roun
 const amount = (it: Item) => it.amountOverride != null ? it.amountOverride : Math.round(area(it) * it.rate * 100) / 100
 
 export default function Quotation() {
+  const { t } = useLanguage()
   const [tab, setTab]       = useState<'list' | 'create'>('list')
   const [search, setSearch] = useState('')
   const [quotes, setQuotes] = useState<(QuoteRow & { rowIndex: number })[]>([])
@@ -206,17 +208,17 @@ export default function Quotation() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="section-title">Quotations</h1>
-          <p className="section-sub">All project quotations for FY 2026-27</p>
+          <h1 className="section-title">{t('quo.title')}</h1>
+          <p className="section-sub">{t('quo.subtitle')}</p>
         </div>
         <div className="flex gap-1.5 bg-gray-100 p-1 rounded-xl">
           <button onClick={() => setTab('list')}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${tab==='list' ? 'bg-white text-brand shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-            <List size={14}/> Quotation List
+            <List size={14}/> {t('quo.list')}
           </button>
           <button onClick={() => { setEditingQuote(null); setTab('create') }}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${tab==='create' ? 'bg-white text-brand shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-            <FileText size={14}/> New Quotation
+            <FileText size={14}/> {t('quo.new')}
           </button>
         </div>
       </div>
@@ -226,34 +228,34 @@ export default function Quotation() {
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div className="card-sm text-center">
               <div className="text-2xl font-bold text-brand">{quotes.length}</div>
-              <div className="text-xs text-gray-500 mt-1">Total Quotations</div>
+              <div className="text-xs text-gray-500 mt-1">{t('quo.totalQuotations')}</div>
             </div>
             <div className="card-sm text-center">
               <div className="text-2xl font-bold text-brand">{fmt(totalValue)}</div>
-              <div className="text-xs text-gray-500 mt-1">Total Value</div>
+              <div className="text-xs text-gray-500 mt-1">{t('quo.totalValue')}</div>
             </div>
             <div className="card-sm text-center">
               <div className="text-2xl font-bold text-green-600">{completed}</div>
-              <div className="text-xs text-gray-500 mt-1">Completed</div>
+              <div className="text-xs text-gray-500 mt-1">{t('quo.completed')}</div>
             </div>
             <div className="card-sm text-center">
               <div className="text-2xl font-bold text-yellow-600">{pending}</div>
-              <div className="text-xs text-gray-500 mt-1">Pending / In Progress</div>
+              <div className="text-xs text-gray-500 mt-1">{t('quo.pendingProgress')}</div>
             </div>
           </div>
 
           <div className="card">
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-              <h2 className="font-semibold text-gray-700">Quotation List</h2>
+              <h2 className="font-semibold text-gray-700">{t('quo.list')}</h2>
               <div className="flex items-center gap-2">
                 <input
                   type="text"
-                  placeholder="Search client or quotation #…"
+                  placeholder={t('quo.searchPlaceholder')}
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-brand-200"
                 />
-                <button onClick={() => { setEditingQuote(null); setTab('create') }} className="btn-gold flex items-center gap-1.5 text-sm"><Plus size={13}/> New Quotation</button>
+                <button onClick={() => { setEditingQuote(null); setTab('create') }} className="btn-gold flex items-center gap-1.5 text-sm"><Plus size={13}/> {t('quo.new')}</button>
               </div>
             </div>
             <div className="overflow-auto max-h-[65vh]">
@@ -265,17 +267,17 @@ export default function Quotation() {
                 </colgroup>
                 <thead>
                   <tr>
-                    <th>Quotation #</th><th>Client</th><th>Date</th>
-                    <th>Total</th><th>GST (18%)</th><th>Grand Total</th><th>Status</th>
-                    <th className="tbl-icon-col whitespace-normal leading-tight">Work Order</th><th className="tbl-icon-col whitespace-normal leading-tight">Email</th><th className="tbl-icon-col whitespace-normal leading-tight">WhatsApp</th><th className="tbl-icon-col whitespace-normal leading-tight">Edit</th><th className="tbl-icon-col whitespace-normal leading-tight">Delete</th>
+                    <th>{t('quo.quotationNo')}</th><th>{t('quo.client')}</th><th>{t('common.date')}</th>
+                    <th>{t('quo.total')}</th><th>GST (18%)</th><th>{t('quo.grandTotal')}</th><th>{t('common.status')}</th>
+                    <th className="tbl-icon-col whitespace-normal leading-tight">{t('quo.workOrder')}</th><th className="tbl-icon-col whitespace-normal leading-tight">{t('quo.email')}</th><th className="tbl-icon-col whitespace-normal leading-tight">{t('quo.whatsapp')}</th><th className="tbl-icon-col whitespace-normal leading-tight">{t('common.edit')}</th><th className="tbl-icon-col whitespace-normal leading-tight">{t('common.delete')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading && (
-                    <tr><td colSpan={12} className="text-center py-10 text-gray-400">Loading…</td></tr>
+                    <tr><td colSpan={12} className="text-center py-10 text-gray-400">{t('quo.loading')}</td></tr>
                   )}
                   {!loading && filtered.length === 0 && (
-                    <tr><td colSpan={12} className="text-center py-10 text-gray-400">{search ? 'No quotations match your search.' : 'No quotations yet.'}</td></tr>
+                    <tr><td colSpan={12} className="text-center py-10 text-gray-400">{search ? t('quo.noMatch') : t('quo.noneYet')}</td></tr>
                   )}
                   {filtered.map(q => (
                     <tr key={q.rowIndex}>

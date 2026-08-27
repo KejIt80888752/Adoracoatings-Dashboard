@@ -716,32 +716,32 @@ function CreateQuotation({ existingQuotes, editing, onSaved, showToast }: { exis
                       placeholder="Texture" className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand" />
                   </td>
                   <td className="px-2 py-2 w-20">
-                    <input type="number" min={0} value={item.length} onChange={e => updateItem(item.id,'length',+e.target.value)}
+                    <input type="number" min={0} value={item.length || ''} placeholder="0" onChange={e => updateItem(item.id,'length',+e.target.value)}
                       className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-right focus:outline-none focus:border-brand" />
                   </td>
                   <td className="px-2 py-2 w-20">
-                    <input type="number" min={0} value={item.height} onChange={e => updateItem(item.id,'height',+e.target.value)}
+                    <input type="number" min={0} value={item.height || ''} placeholder="0" onChange={e => updateItem(item.id,'height',+e.target.value)}
                       className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-right focus:outline-none focus:border-brand" />
                   </td>
                   <td className="px-2 py-2 w-16">
-                    <input type="number" min={1} value={item.nos} onChange={e => updateItem(item.id,'nos',+e.target.value)}
+                    <input type="number" min={1} value={item.nos || ''} placeholder="1" onChange={e => updateItem(item.id,'nos',+e.target.value)}
                       className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none focus:border-brand" />
                   </td>
                   <td className="px-2 py-2 w-20">
-                    <input type="number" min={0} step={0.1} value={item.coefficient} onChange={e => updateItem(item.id,'coefficient',+e.target.value)}
+                    <input type="number" min={0} step={0.1} value={item.coefficient || ''} placeholder="1" onChange={e => updateItem(item.id,'coefficient',+e.target.value)}
                       className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-right focus:outline-none focus:border-brand" />
                   </td>
                   <td className="px-2 py-2 w-24">
-                    <input type="number" min={0} value={area(item)} onChange={e => updateItem(item.id,'areaOverride',+e.target.value)}
+                    <input type="number" min={0} value={area(item) || ''} placeholder="0" onChange={e => updateItem(item.id,'areaOverride',+e.target.value)}
                       title="Only know the total area? Type it directly here instead of Length/Height/Nos/Co-efficient."
                       className={`w-24 border rounded-lg px-2 py-1.5 text-xs text-right focus:outline-none focus:border-brand ${item.areaOverride != null ? 'border-brand/50 bg-brand/5' : 'border-gray-200'}`} />
                   </td>
                   <td className="px-2 py-2 w-24">
-                    <input type="number" min={0} value={item.rate} onChange={e => updateItem(item.id,'rate',+e.target.value)}
+                    <input type="number" min={0} value={item.rate || ''} placeholder="0" onChange={e => updateItem(item.id,'rate',+e.target.value)}
                       className="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-right focus:outline-none focus:border-brand" />
                   </td>
                   <td className="px-2 py-2 w-28">
-                    <input type="number" min={0} value={amount(item)} onChange={e => updateItem(item.id,'amountOverride',+e.target.value)}
+                    <input type="number" min={0} value={amount(item) || ''} placeholder="0" onChange={e => updateItem(item.id,'amountOverride',+e.target.value)}
                       title="Only know the final amount? Type it directly here instead of Rate."
                       className={`w-28 border rounded-lg px-2 py-1.5 text-xs text-right font-semibold focus:outline-none focus:border-brand ${item.amountOverride != null ? 'border-brand/50 bg-brand/5 text-brand' : 'border-gray-200 text-brand'}`} />
                   </td>

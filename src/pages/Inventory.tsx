@@ -550,10 +550,20 @@ export default function Inventory() {
                   return
                 }
                 setSaving(true)
+                // Persist to both sheets: Stock (so it shows up here with 0
+                // qty) and Products (the catalog the Products page and
+                // Quotation/Billing item pickers actually read from) --
+                // previously this only wrote to Stock, so a newly added
+                // product never appeared on the Products page despite the
+                // label above claiming it would.
                 const result = await addRow('Stock', {
                   Product: newProd.name, Location: 'NewProduct', Qty: 0,
                   Notes: JSON.stringify({ unit: newProd.unit, packSize: newProd.packSize }),
                   'Updated By': 'Dashboard', Date: new Date().toLocaleDateString('en-IN'),
+                })
+                await addRow('Products', {
+                  Name: newProd.name, Category: newProd.category,
+                  'Pack Size': newProd.packSize, Unit: newProd.unit, Rate: '', GST: '18%',
                 })
                 setSaving(false)
                 if (result?.status === 'ok') {

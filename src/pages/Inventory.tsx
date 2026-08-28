@@ -568,6 +568,15 @@ export default function Inventory() {
                 setSaving(false)
                 if (result?.status === 'ok') {
                   showToast(`✓ "${newProd.name}" added to catalog!`)
+                  // Show it (and bump the Total Products count) immediately --
+                  // syncFromSheet still runs right after to reconcile with the
+                  // server, but that round-trip takes a moment, and waiting on
+                  // it alone made the count look stuck at the old number for
+                  // a beat right after the "added" toast.
+                  setStock(prev => [...prev, {
+                    sl: prev.length + 1, name: newProd.name, unit: newProd.unit, packSize: newProd.packSize,
+                    godownQty: 0, godownKg: 0, seaAirQty: 0, seaAirKg: 0, dispatch: 0, productReturn: 0,
+                  }])
                   setNewProd({ name:'', unit:'Ltr', packSize:'1 Ltr', category:'Wall Finishes' })
                   syncFromSheet(true)
                 } else {

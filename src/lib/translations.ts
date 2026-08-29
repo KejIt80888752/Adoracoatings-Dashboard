@@ -28,6 +28,8 @@ const dict = {
   'nav.userManagement': { en: 'User Management',      kn: 'ಬಳಕೆದಾರ ನಿರ್ವಹಣೆ',            hi: 'उपयोगकर्ता प्रबंधन' },
   'nav.orders':         { en: 'Orders',               kn: 'ಆರ್ಡರ್‌ಗಳು',                  hi: 'ऑर्डर' },
   'nav.settings':       { en: 'Settings',             kn: 'ಸೆಟ್ಟಿಂಗ್‌ಗಳು',               hi: 'सेटिंग्स' },
+  'nav.pipeline':       { en: 'Project Pipeline',     kn: 'ಯೋಜನೆ ಪೈಪ್‌ಲೈನ್',             hi: 'परियोजना पाइपलाइन' },
+  'nav.followups':      { en: 'Follow-Ups',           kn: 'ಫಾಲೋ-ಅಪ್‌ಗಳು',                hi: 'फॉलो-अप' },
   'nav.signOut':        { en: 'Sign Out',             kn: 'ಸೈನ್ ಔಟ್',                    hi: 'साइन आउट' },
 
   // ── Common actions (shared across pages) ──

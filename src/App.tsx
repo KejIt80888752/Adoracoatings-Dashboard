@@ -21,6 +21,8 @@ import GstReports        from '@/pages/GstReports'
 import UserManagement    from '@/pages/UserManagement'
 import Clients           from '@/pages/Clients'
 import Inventory         from '@/pages/Inventory'
+import Pipeline          from '@/pages/Pipeline'
+import FollowUps         from '@/pages/FollowUps'
 
 function Guard({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
@@ -49,6 +51,8 @@ function AppRoutes() {
               <Route path="/user-management"   element={<UserManagement  />} />
               <Route path="/clients"           element={<Clients         />} />
               <Route path="/inventory"         element={<Inventory       />} />
+              <Route path="/pipeline"          element={<Pipeline        />} />
+              <Route path="/followups"         element={<FollowUps       />} />
               <Route path="/orders"            element={<Orders          />} />
               <Route path="/reports"           element={<Reports         />} />
               <Route path="/settings"          element={<Settings        />} />

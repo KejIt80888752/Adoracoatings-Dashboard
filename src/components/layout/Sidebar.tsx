@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Package, Image, Users,
   ShoppingCart, TrendingUp, Settings, LogOut, X,
   FileText, Receipt, ShoppingBag, CreditCard,
-  BarChart2, FileSpreadsheet, UserCog, Building2, Warehouse,
+  BarChart2, FileSpreadsheet, UserCog, Building2, Warehouse, Kanban, PhoneCall,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -14,10 +14,12 @@ const NAV: { to: string; icon: typeof LayoutDashboard; labelKey: TranslationKey 
   { to: '/',                 icon: LayoutDashboard, labelKey: 'nav.dashboard'       },
   { to: '/products',         icon: Package,         labelKey: 'nav.products'        },
   { to: '/inventory',        icon: Warehouse,       labelKey: 'nav.inventory'       },
+  { to: '/pipeline',         icon: Kanban,          labelKey: 'nav.pipeline'        },
   { to: '/portfolio',        icon: Image,           labelKey: 'nav.portfolio'       },
   { to: '/quotation',        icon: FileText,        labelKey: 'nav.quotation'       },
   { to: '/billing',          icon: Receipt,         labelKey: 'nav.billing'         },
   { to: '/leads',            icon: Users,           labelKey: 'nav.leads'           },
+  { to: '/followups',        icon: PhoneCall,       labelKey: 'nav.followups'       },
   { to: '/clients',          icon: Building2,       labelKey: 'nav.clients'         },
   { to: '/sales-reports',    icon: TrendingUp,      labelKey: 'nav.salesReports'    },
   { to: '/purchase-reports', icon: ShoppingBag,     labelKey: 'nav.purchaseReports' },

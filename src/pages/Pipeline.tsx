@@ -49,24 +49,37 @@ export default function Pipeline() {
 
   // No update-in-place API -- moving a card or re-assigning a team member
   // deletes the old Quotation row and re-adds it with the changed field(s).
+  // The Apps Script endpoint occasionally answers a POST with an HTML page
+  // instead of JSON (a transient Google-side redirect quirk) even though the
+  // write actually went through server-side -- so this is a FALSE negative,
+  // not a real failure, and retrying here would risk adding a duplicate row
+  // on top of the one that already saved. The one thing that must never
+  // happen regardless is the busy state getting stuck forever (freezing the
+  // card with no way to retry short of a full page reload), so this always
+  // resets it via finally and tells the user to check the board themselves
+  // rather than guessing and possibly duplicating data.
   const updateQuote = async (q: Quote, patch: Partial<QuoteRow>) => {
     setBusyRow(q.rowIndex)
-    const delResult = await deleteRow('Quotations', q.rowIndex)
-    if (delResult?.status !== 'ok') {
+    try {
+      const delResult = await deleteRow('Quotations', q.rowIndex)
+      if (delResult?.status !== 'ok') {
+        showToast(`✗ Failed to update: ${delResult?.error || 'unknown error'}`)
+        return
+      }
+      const { rowIndex, ...rest } = q
+      const result = await addRow('Quotations', { ...rest, ...patch })
+      if (result?.status === 'ok') { showToast(`✓ ${q['Quote No']} updated`); load(true) }
+      else { showToast(`⚠ Save response unclear for "${q['Quote No']}" — please refresh and check before re-entering it`); load(true) }
+    } finally {
       setBusyRow(null)
-      showToast(`✗ Failed to update: ${delResult?.error || 'unknown error'}`)
-      return
     }
-    const { rowIndex, ...rest } = q
-    const result = await addRow('Quotations', { ...rest, ...patch })
-    setBusyRow(null)
-    if (result?.status === 'ok') { showToast(`✓ ${q['Quote No']} updated`); load(true) }
-    else showToast(`✗ Failed to update: ${result?.error || 'unknown error'}`)
   }
 
+  // Always show every stage column, even empty ones -- otherwise a stage with
+  // no quotations in it yet doesn't exist as a dropdown option, and a card
+  // can never be moved forward into it in the first place.
   const stagesPresent = Array.from(new Set(quotes.map(q => q.Status || 'Pending')))
-  const stages = [...STAGE_ORDER.filter(s => stagesPresent.includes(s)), ...stagesPresent.filter(s => !STAGE_ORDER.includes(s))]
-  const columns = stages.length ? stages : STAGE_ORDER
+  const columns = [...STAGE_ORDER, ...stagesPresent.filter(s => !STAGE_ORDER.includes(s))]
 
   const totalValue = quotes.reduce((s, q) => s + (Number(q['Grand Total']) || 0), 0)
 

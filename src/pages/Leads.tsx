@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Search, Mail, MessageCircle, Phone, Send, Clock, CheckCheck, Filter, Download, User, Instagram, Link, X, Copy, ExternalLink, RefreshCw, Heart, Trash2 } from 'lucide-react'
+import { Plus, Search, Mail, MessageCircle, Phone, Send, Clock, CheckCheck, Filter, Download, User, Instagram, Link, X, Copy, ExternalLink, RefreshCw, Heart, Trash2, Kanban, Pencil } from 'lucide-react'
 import { fetchSheet, addRow, syncInstagram, deleteRow } from '../lib/api'
 
 type IgProfile = { Username: string; Name: string; Biography: string; Followers: number; 'Media Count': number; 'Synced At': string }
@@ -11,9 +11,18 @@ type Lead = { ID: string; Name: string; Phone: string; Email: string; Source: st
 
 const LEADS: { id: number; name: string; ph: string; email: string; src: string; status: string; via: string; last: string; stage: string }[] = []
 
+// Google Sheets round-trips a plain date string as a full ISO datetime
+// ("2026-09-17T00:00:00.000Z") -- strip it back down to just the date.
+const fmtDate = (d: string) => {
+  if (!d) return '—'
+  const iso = d.match(/^(\d{4})-(\d{2})-(\d{2})T/)
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`
+  return d
+}
+
 function mapLead(l: Lead, i: number) {
   // Row 1 in the sheet is the header, so data row i (0-based) sits at sheet row i+2.
-  return { id: i+1, rowIndex: i+2, name: l.Name||'', ph: l.Phone||'', email: l.Email||'', src: l.Source||'', status: l.Status||'New', via: l.Via||'', last: l['Date Added']||'', stage: l.Stage||'', notes: l.Notes||'' }
+  return { id: i+1, rowIndex: i+2, name: l.Name||'', ph: l.Phone||'', email: l.Email||'', src: l.Source||'', status: l.Status||'New', via: l.Via||'', last: fmtDate(l['Date Added']||''), stage: l.Stage||'', notes: l.Notes||'' }
 }
 
 const EMAIL_TMPL = [
@@ -36,13 +45,30 @@ const sColor: Record<string,string> = { Hot:'badge-red', Warm:'badge-yellow', Ne
 const vColor: Record<string,string> = { WhatsApp:'badge-green', Email:'badge-blue' }
 const srcColor: Record<string,string> = { Instagram:'badge-red', Website:'badge-blue', Referral:'badge-green', 'Walk-in':'badge-gray' }
 
+// Lead Tracker -- the funnel a lead moves through from first contact to won/lost.
+// Fixed display order, but any other Stage value typed elsewhere still shows up
+// (in an "Other" column) instead of silently vanishing off the board.
+const STAGE_ORDER = ['Initial Contact', 'Follow-Up', 'Quotation Sent', 'Negotiation', 'Won', 'Lost']
+const STAGE_COLOR: Record<string, string> = {
+  'Initial Contact': 'border-blue-400 bg-blue-50/50',
+  'Follow-Up':        'border-yellow-400 bg-yellow-50/50',
+  'Quotation Sent':   'border-purple-400 bg-purple-50/50',
+  'Negotiation':      'border-orange-400 bg-orange-50/50',
+  'Won':               'border-green-400 bg-green-50/50',
+  'Lost':              'border-red-400 bg-red-50/50',
+}
+
 export default function Leads() {
-  const [tab, setTab]       = useState<'leads'|'instagram'|'email'|'wa'>('leads')
+  const [tab, setTab]       = useState<'leads'|'tracker'|'instagram'|'email'|'wa'>('leads')
   const [search, setSearch] = useState('')
   const [sf, setSf]         = useState('All')
   const [modal, setModal]   = useState(false)
   const [exp, setExp]       = useState<string|null>(null)
   const [liveLeads, setLiveLeads]   = useState<(typeof LEADS[number] & { rowIndex?: number; notes?: string })[] | null>(null)
+  // Raw sheet rows (all original fields + rowIndex) -- needed alongside the
+  // display-mapped liveLeads above so editing/stage-changing a lead can
+  // delete+re-add the row without losing fields the display view doesn't carry.
+  const [rawLeads, setRawLeads]     = useState<(Lead & { rowIndex: number })[]>([])
   const [syncing, setSyncing]       = useState(false)
   const [lastSync, setLastSync]     = useState<string|null>(null)
   const [sendModal, setSendModal]   = useState<{type:'email'|'wa'; name:string; subject?:string; msg:string} | null>(null)
@@ -55,6 +81,9 @@ export default function Leads() {
   const [igMedia, setIgMedia]       = useState<IgMedia[]>([])
   const [igSyncing, setIgSyncing]   = useState(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [editLead, setEditLead]     = useState<(Lead & { rowIndex: number }) | null>(null)
+  const [editForm, setEditForm]     = useState({ name:'', phone:'', email:'', source:'Cold Call', via:'Phone', status:'New', stage:'Initial Contact', notes:'' })
+  const [busyRow, setBusyRow]       = useState<number | null>(null)
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const copyText = (t: string) => { navigator.clipboard.writeText(t); setCopied(true); setTimeout(() => setCopied(false), 2000) }
@@ -86,14 +115,67 @@ export default function Leads() {
         )
         if (!hasDummyData && mapped.length > 0) {
           setLiveLeads(mapped)
+          setRawLeads(rows.map((r, i) => ({ ...r, rowIndex: i + 2 })).filter(r => r.Name && r.Name.length > 2))
           setLastSync(new Date().toLocaleTimeString('en-IN'))
         } else if (mapped.length === 0) {
           setLiveLeads([])
+          setRawLeads([])
         }
       } else {
         setLiveLeads([])
+        setRawLeads([])
       }
     }).finally(() => setSyncing(false))
+  }
+
+  // No update-in-place API -- editing a lead (or just dragging its Tracker
+  // card to a new stage) deletes the old row and re-adds it with the changed
+  // fields, same pattern used everywhere else in the app.
+  // The Apps Script endpoint occasionally answers a POST with an HTML page
+  // instead of JSON (a transient Google-side redirect quirk) even though the
+  // write actually went through server-side -- so this is a FALSE negative,
+  // not a real failure, and retrying here would risk adding a duplicate row
+  // on top of the one that already saved. The one thing that must never
+  // happen regardless is the busy state getting stuck forever (freezing the
+  // button on "Saving..." with no way to retry short of a full page reload),
+  // so this always resets it via finally and tells the user to check the
+  // sheet themselves rather than guessing and possibly duplicating data.
+  const updateLead = async (l: Lead & { rowIndex: number }, patch: Partial<Lead>): Promise<boolean> => {
+    setBusyRow(l.rowIndex)
+    try {
+      const delResult = await deleteRow('Leads', l.rowIndex)
+      if (delResult?.status !== 'ok') {
+        showToast(`✗ Failed to update: ${delResult?.error || 'unknown error'}`)
+        return false
+      }
+      const { rowIndex, ...rest } = l
+      const result = await addRow('Leads', { ...rest, ...patch })
+      if (result?.status === 'ok') { showToast(`✓ ${l.Name} updated`); loadLeads(); return true }
+      showToast(`⚠ Save response unclear for "${l.Name}" — please refresh and check the list before re-entering it`)
+      loadLeads()
+      return false
+    } finally {
+      setBusyRow(null)
+    }
+  }
+
+  const openEdit = (l: Lead & { rowIndex: number }) => {
+    setEditLead(l)
+    setEditForm({
+      name: l.Name || '', phone: l.Phone || '', email: l.Email || '',
+      source: l.Source || 'Cold Call', via: l.Via || 'Phone',
+      status: l.Status || 'New', stage: l.Stage || 'Initial Contact', notes: l.Notes || '',
+    })
+  }
+
+  const handleEditSave = async () => {
+    if (!editLead || !editForm.name) return
+    const ok = await updateLead(editLead, {
+      Name: editForm.name, Phone: editForm.phone, Email: editForm.email,
+      Source: editForm.source, Via: editForm.via,
+      Status: editForm.status, Stage: editForm.stage, Notes: editForm.notes,
+    })
+    if (ok) setEditLead(null)
   }
 
   const handleDeleteLead = async (l: { id: number; rowIndex?: number; name: string }) => {
@@ -192,6 +274,7 @@ export default function Leads() {
         <div className="flex border-b border-gray-100">
           {([
             { id:'leads',     label:'All Leads',           icon: User         },
+            { id:'tracker',   label:'Lead Tracker',         icon: Kanban       },
             { id:'instagram', label:'Instagram Leads',      icon: Instagram    },
             { id:'email',     label:'Email Automation',     icon: Mail         },
             { id:'wa',        label:'WhatsApp Automation',  icon: MessageCircle},
@@ -256,6 +339,12 @@ export default function Leads() {
                           <button className="p-1.5 text-gray-600 hover:text-green-400 hover:bg-green-500/10 rounded-lg transition-colors" title="WhatsApp"><MessageCircle size={13}/></button>
                           <button className="p-1.5 text-gray-600 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors" title="Call"><Phone size={13}/></button>
                           {l.rowIndex && (
+                            <button onClick={() => { const raw = rawLeads.find(r => r.rowIndex === l.rowIndex); if (raw) openEdit(raw) }}
+                              className="p-1.5 text-gray-600 hover:text-brand hover:bg-brand-50 rounded-lg transition-colors" title="Edit lead">
+                              <Pencil size={13}/>
+                            </button>
+                          )}
+                          {l.rowIndex && (
                             <button onClick={() => handleDeleteLead(l)} disabled={deletingId === l.id}
                               className="p-1.5 text-gray-600 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40" title="Delete lead">
                               <Trash2 size={13}/>
@@ -270,6 +359,60 @@ export default function Leads() {
             </div>
           </div>
         )}
+
+        {/* LEAD TRACKER — Kanban board grouped by funnel Stage */}
+        {tab === 'tracker' && (() => {
+          // Always show every stage column, even empty ones -- otherwise a
+          // stage with no leads yet doesn't exist as a dropdown option, and a
+          // lead can never be moved forward into it in the first place.
+          const stagesPresent = Array.from(new Set(rawLeads.map(l => l.Stage || 'Initial Contact')))
+          const columns = [...STAGE_ORDER, ...stagesPresent.filter(s => !STAGE_ORDER.includes(s))]
+          return (
+            <div className="p-4 space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <p className="text-xs text-gray-500">Drag a lead through the funnel by changing its stage on the card — persisted straight to the sheet.</p>
+                <button onClick={loadLeads} disabled={syncing} className="btn-outline-gold text-xs flex items-center gap-1.5 disabled:opacity-50">
+                  <RefreshCw size={12} className={syncing ? 'animate-spin' : ''} /> Refresh
+                </button>
+              </div>
+              <div className="grid gap-3 overflow-x-auto" style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(220px, 1fr))` }}>
+                {columns.map(stage => {
+                  const cards = rawLeads.filter(l => (l.Stage || 'Initial Contact') === stage)
+                  return (
+                    <div key={stage} className={`rounded-xl border-t-4 ${STAGE_COLOR[stage] || 'border-gray-300 bg-gray-50/50'} p-3 space-y-3 min-h-[200px]`}>
+                      <div className="flex items-center justify-between px-1">
+                        <h3 className="font-semibold text-sm text-gray-700">{stage}</h3>
+                        <span className="text-xs text-gray-400 font-mono">{cards.length}</span>
+                      </div>
+                      {syncing && <p className="text-xs text-gray-400 text-center py-6">Loading…</p>}
+                      {!syncing && cards.length === 0 && <p className="text-xs text-gray-400 text-center py-6">No leads here</p>}
+                      {cards.map(l => (
+                        <div key={l.rowIndex} className="bg-white rounded-lg shadow-sm border border-gray-100 p-3 space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm font-semibold text-gray-800 leading-tight">{l.Name}</p>
+                            <span className={sColor[l.Status] ?? 'badge-gray'}>{l.Status || 'New'}</span>
+                          </div>
+                          <p className="text-xs text-gray-500">{l.Phone || '—'} · <span className={srcColor[l.Source] ?? 'badge-gray'}>{l.Source}</span></p>
+                          {l.Notes && <p className="text-[11px] text-gray-400 truncate" title={l.Notes}>{l.Notes}</p>}
+                          <div className="flex items-center gap-1.5 pt-1 border-t border-gray-50">
+                            <select value={stage} disabled={busyRow === l.rowIndex}
+                              onChange={e => updateLead(l, { Stage: e.target.value })}
+                              className="flex-1 text-[11px] border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:border-brand disabled:opacity-50">
+                              {columns.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                            <button onClick={() => openEdit(l)} className="text-gray-300 hover:text-brand p-1" title="Edit lead">
+                              <Pencil size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })()}
 
         {/* INSTAGRAM */}
         {tab === 'instagram' && (
@@ -553,6 +696,57 @@ export default function Leads() {
                 }}
                 className="flex-1 btn-gold disabled:opacity-50">
                 {saving ? 'Saving...' : 'Add Lead → Sheet'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Lead Modal */}
+      {editLead && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setEditLead(null)}>
+          <div className="bg-white border border-gray-100 rounded-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="font-display text-xl font-semibold text-gray-800">Edit Lead</h2>
+              <button onClick={() => setEditLead(null)}><X size={18} className="text-gray-400" /></button>
+            </div>
+            <div className="space-y-4">
+              <div><label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-wider">Company / Firm Name *</label>
+                <input className="input-dark" value={editForm.name} onChange={e=>setEditForm(f=>({...f,name:e.target.value}))}/></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-wider">Phone</label>
+                  <input className="input-dark" value={editForm.phone} onChange={e=>setEditForm(f=>({...f,phone:e.target.value}))}/></div>
+                <div><label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-wider">Email</label>
+                  <input className="input-dark" value={editForm.email} onChange={e=>setEditForm(f=>({...f,email:e.target.value}))}/></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-wider">Source</label>
+                  <select className="input-dark" value={editForm.source} onChange={e=>setEditForm(f=>({...f,source:e.target.value}))}>
+                    <option>Cold Call</option><option>Instagram</option><option>Referral</option><option>Walk-in</option><option>Website</option>
+                  </select></div>
+                <div><label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-wider">Via</label>
+                  <select className="input-dark" value={editForm.via} onChange={e=>setEditForm(f=>({...f,via:e.target.value}))}>
+                    <option>Phone</option><option>WhatsApp</option><option>Email</option>
+                  </select></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-wider">Status</label>
+                  <select className="input-dark" value={editForm.status} onChange={e=>setEditForm(f=>({...f,status:e.target.value}))}>
+                    <option>New</option><option>Warm</option><option>Hot</option><option>Cold</option><option>Converted</option>
+                  </select></div>
+                <div><label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-wider">Stage</label>
+                  <select className="input-dark" value={editForm.stage} onChange={e=>setEditForm(f=>({...f,stage:e.target.value}))}>
+                    {STAGE_ORDER.map(s => <option key={s}>{s}</option>)}
+                  </select></div>
+              </div>
+              <div><label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-wider">Notes / Message</label>
+                <textarea className="input-dark" rows={3} value={editForm.notes} onChange={e=>setEditForm(f=>({...f,notes:e.target.value}))}/></div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setEditLead(null)} className="flex-1 btn-outline-gold">Cancel</button>
+              <button disabled={!editForm.name || busyRow === editLead.rowIndex} onClick={handleEditSave}
+                className="flex-1 btn-gold disabled:opacity-50">
+                {busyRow === editLead.rowIndex ? 'Saving...' : 'Update Lead'}
               </button>
             </div>
           </div>

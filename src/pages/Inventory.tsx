@@ -173,6 +173,11 @@ export default function Inventory() {
           // Kg/L never dropped after a dispatch, and a later Return then over-
           // counted on top of the un-decremented total).
           else if (row.Location === 'Dispatch')              { item.dispatch += qty; item.godownQty -= qty; item.godownKg -= qty }
+          // A product with stock only in Sea Air (no Godown qty) couldn't be
+          // dispatched at all before -- the Dispatch dropdown only listed
+          // products with Godown stock. This mirrors 'Dispatch' but draws
+          // down Sea Air instead.
+          else if (row.Location === 'Dispatch-SeaAir')       { item.dispatch += qty; item.seaAirQty -= qty; item.seaAirKg -= qty }
           else if (row.Location?.startsWith('Return'))       { item.productReturn += qty; item.godownQty += qty; item.godownKg += qty }
         }
         return next
@@ -305,15 +310,27 @@ export default function Inventory() {
     if (!dispForm.product || !dispForm.qty) return
     const qty = Number(dispForm.qty)
     const current = stock.find(s => s.name === dispForm.product)
-    if (current && qty > current.godownQty) {
-      showToast(`✗ Only ${current.godownQty} units of ${dispForm.product} in Godown`)
+    if (!current) return
+    // Dispatch from whichever location actually has enough of it -- Godown
+    // first (the common case), falling back to Sea Air so a product that
+    // only has Sea Air stock (like MICROLITE 500, TECH COAT PRO) can be
+    // dispatched too, instead of being silently unavailable.
+    const fromGodown = qty <= current.godownQty
+    const fromSeaAir = !fromGodown && qty <= current.seaAirQty
+    if (!fromGodown && !fromSeaAir) {
+      showToast(`✗ Only ${current.godownQty} in Godown / ${current.seaAirQty} in Sea Air for ${dispForm.product} — not enough in either location`)
       return
     }
     setSaving(true)
-    setStock(prev => prev.map(s => s.name === dispForm.product ? { ...s, dispatch: s.dispatch + qty, godownQty: s.godownQty - qty, godownKg: s.godownKg - qty } : s))
-    await addRow('Stock', { Product: dispForm.product, Location: 'Dispatch', Qty: dispForm.qty, Notes: `Project: ${dispForm.project} | ${dispForm.notes}`, 'Updated By': 'Dashboard', Date: dispForm.date })
+    if (fromGodown) {
+      setStock(prev => prev.map(s => s.name === dispForm.product ? { ...s, dispatch: s.dispatch + qty, godownQty: s.godownQty - qty, godownKg: s.godownKg - qty } : s))
+      await addRow('Stock', { Product: dispForm.product, Location: 'Dispatch', Qty: dispForm.qty, Notes: `Project: ${dispForm.project} | ${dispForm.notes}`, 'Updated By': 'Dashboard', Date: dispForm.date })
+    } else {
+      setStock(prev => prev.map(s => s.name === dispForm.product ? { ...s, dispatch: s.dispatch + qty, seaAirQty: s.seaAirQty - qty, seaAirKg: s.seaAirKg - qty } : s))
+      await addRow('Stock', { Product: dispForm.product, Location: 'Dispatch-SeaAir', Qty: dispForm.qty, Notes: `Project: ${dispForm.project} | ${dispForm.notes}`, 'Updated By': 'Dashboard', Date: dispForm.date })
+    }
     setSaving(false)
-    showToast(`✓ ${dispForm.product} — ${qty} units dispatched`)
+    showToast(`✓ ${dispForm.product} — ${qty} units dispatched (from ${fromGodown ? 'Godown' : 'Sea Air'})`)
     setDispForm({ product:'', qty:'', project:'', date: new Date().toLocaleDateString('en-IN'), notes:'' })
   }
 
@@ -597,7 +614,7 @@ export default function Inventory() {
             <div><label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color:'var(--text-3)'}}>Product *</label>
               <select className="input-dark" value={dispForm.product} onChange={e=>setDispForm(f=>({...f,product:e.target.value}))}>
                 <option value="">— Select Product —</option>
-                {stock.filter(s=>s.godownQty>0).map(s=><option key={s.sl} value={s.name}>{s.name} (Godown: {s.godownQty} units)</option>)}
+                {stock.filter(s=>s.godownQty>0 || s.seaAirQty>0).map(s=><option key={s.sl} value={s.name}>{s.name} (Godown: {s.godownQty}, Sea Air: {s.seaAirQty})</option>)}
               </select></div>
             <div className="grid grid-cols-2 gap-3">
               <div><label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color:'var(--text-3)'}}>Quantity *</label>

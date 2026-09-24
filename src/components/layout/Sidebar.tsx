@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
@@ -6,7 +7,7 @@ import {
   LayoutDashboard, Package, Image, Users,
   ShoppingCart, TrendingUp, Settings, LogOut, X,
   FileText, Receipt, ShoppingBag, CreditCard,
-  BarChart2, FileSpreadsheet, UserCog, Building2, Warehouse, Kanban, PhoneCall,
+  BarChart2, FileSpreadsheet, UserCog, Building2, Warehouse, Kanban, PhoneCall, ChevronDown,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -38,6 +39,23 @@ export default function Sidebar({ open, onClose }: Props) {
   const { t } = useLanguage()
   const navigate = useNavigate()
   const handleLogout = () => { logout(); navigate('/login') }
+
+  // On short screens the nav list (17 items) doesn't fit and scrolls, but a
+  // plain overflow:auto scrollbar is thin and easy to miss -- reported live
+  // as "not all the sheets are available" when they were just scrolled out
+  // of view. Show a fade + down-chevron hint whenever there's more to
+  // scroll, so it's obvious the list continues instead of looking finished.
+  const navRef = useRef<HTMLElement>(null)
+  const [canScrollMore, setCanScrollMore] = useState(false)
+  useEffect(() => {
+    const el = navRef.current
+    if (!el) return
+    const check = () => setCanScrollMore(el.scrollHeight - el.scrollTop - el.clientHeight > 4)
+    check()
+    el.addEventListener('scroll', check)
+    window.addEventListener('resize', check)
+    return () => { el.removeEventListener('scroll', check); window.removeEventListener('resize', check) }
+  }, [])
 
   return (
     <>
@@ -72,20 +90,27 @@ export default function Sidebar({ open, onClose }: Props) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-3 overflow-y-auto space-y-0.5">
-          {NAV.map(({ to, icon: Icon, labelKey }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/'}
-              onClick={onClose}
-              className={({ isActive }) => cn('nav-link', isActive && 'active')}
-            >
-              <Icon size={15} />
-              {t(labelKey)}
-            </NavLink>
-          ))}
-        </nav>
+        <div className="relative flex-1 min-h-0">
+          <nav ref={navRef} className="h-full px-3 py-3 overflow-y-auto space-y-0.5">
+            {NAV.map(({ to, icon: Icon, labelKey }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={to === '/'}
+                onClick={onClose}
+                className={({ isActive }) => cn('nav-link', isActive && 'active')}
+              >
+                <Icon size={15} />
+                {t(labelKey)}
+              </NavLink>
+            ))}
+          </nav>
+          {canScrollMore && (
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-10 flex items-end justify-center pb-1 bg-gradient-to-t from-white to-transparent">
+              <ChevronDown size={14} className="text-gray-400 animate-bounce" />
+            </div>
+          )}
+        </div>
 
         {/* User */}
         <div className="px-3 pb-3 pt-2 border-t border-gray-100 shrink-0">

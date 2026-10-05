@@ -39,13 +39,13 @@ export default function Login() {
   const fillCred = (e: string, p: string) => { setEmail(e); setPw(p); setError('') }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: '#eef2f5' }}>
+    <div className="min-h-screen flex items-center justify-center p-3 sm:p-6" style={{ backgroundColor: '#eef2f5' }}>
 
       {/* Centered card */}
       <div className="flex w-full max-w-3xl rounded-2xl overflow-hidden shadow-2xl">
 
         {/* Left — Adora green panel */}
-        <div className="w-[44%] flex flex-col justify-between py-10 px-9 shrink-0"
+        <div className="hidden md:flex w-[44%] flex-col justify-between py-10 px-9 shrink-0"
           style={{ background: 'linear-gradient(160deg, #2d5213 0%, #3d6b1a 55%, #2d5213 100%)' }}>
 
           {/* Logo on white card */}
@@ -104,8 +104,13 @@ export default function Login() {
         </div>
 
         {/* Right — form */}
-        <div className="flex-1 bg-white px-10 py-10 flex flex-col justify-center">
+        <div className="flex-1 min-w-0 bg-white px-5 py-8 sm:px-10 sm:py-10 flex flex-col justify-center">
 
+          <img
+            src={`${import.meta.env.BASE_URL}adora-logo.png`}
+            alt="Adora Coatings"
+            className="md:hidden h-12 w-auto object-contain object-left mb-6"
+          />
           <h2 className="font-display text-2xl font-bold text-gray-800 mb-1.5">Sign In</h2>
           <p className="text-gray-400 text-sm mb-8">Access your business dashboard</p>
 

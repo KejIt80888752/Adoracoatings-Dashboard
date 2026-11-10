@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus, Trash2, CheckCheck, FileText, List, FileSignature, Pencil, Mail, MessageCircle } from 'lucide-react'
-import { fetchSheet, addRow, deleteRow } from '../lib/api'
+import { fetchSheet, deleteRow } from '../lib/api'
+import { addRowVerified, replaceRowSafely } from '../lib/safeSave'
 import { useLanguage } from '../hooks/useLanguage'
 
 const fmt = (n: number) => '₹' + n.toLocaleString('en-IN')
@@ -31,7 +32,14 @@ type Item = {
   // (or from Area x Rate) -- lets a quotation be built from just a known Area
   // or a known Amount, with no division anywhere so there's no zero-denominator case.
   areaOverride?: number; amountOverride?: number
+  // Lumpsum: a single fixed price, no measurements or rate.
+  lumpsum?: boolean
+  // Several walls/areas of the same finish quoted as ONE line: each is
+  // measured separately, the item's area is their sum, and the one rate
+  // applies to the total.
+  parts?: Part[]
 }
+type Part = { id: number; label: string; length: number; height: number; nos: number }
 type QuoteRow = { 'Quote No': string; Date: string; 'Client Name': string; 'Client Address': string; 'Client Phone': string; 'Client Email': string; 'Handled By': string; 'Enquired By': string; 'Finish Type': string; Items: string; Total: string; GST: string; 'Grand Total': string; Status: string; Notes: string }
 
 const FINISH_TYPES = ['ACRALIYC', 'MICROLITE'] as const
@@ -144,8 +152,28 @@ function newItem(id: number): Item {
   return { id, particulars: '', texture: '', length: 0, height: 0, nos: 1, coefficient: 1, rate: 0 }
 }
 
-const area = (it: Item) => it.areaOverride != null ? it.areaOverride : Math.round(it.length * it.height * it.nos * it.coefficient * 100) / 100
-const amount = (it: Item) => it.amountOverride != null ? it.amountOverride : Math.round(area(it) * it.rate * 100) / 100
+const partsArea = (parts: Part[]) => parts.reduce((s, p) => s + (p.length || 0) * (p.height || 0) * (p.nos || 0), 0)
+const area = (it: Item) => {
+  if (it.lumpsum) return 0
+  if (it.areaOverride != null) return it.areaOverride
+  if (it.parts?.length) return Math.round(partsArea(it.parts) * (it.coefficient || 0) * 100) / 100
+  return Math.round(it.length * it.height * it.nos * it.coefficient * 100) / 100
+}
+const amount = (it: Item) => {
+  if (it.lumpsum) return it.amountOverride ?? 0
+  return it.amountOverride != null ? it.amountOverride : Math.round(area(it) * it.rate * 100) / 100
+}
+
+// Custom commercial terms ride along inside the Items JSON as one extra
+// {_terms:[...]} element: the Quotations sheet has fixed columns and the
+// backend drops any key that isn't already a header.
+type SavedItem = Item & { area?: number; amount?: number }
+const parseItems = (raw: string): { items: SavedItem[]; terms: string[] | null } => {
+  let arr: unknown[] = []
+  try { arr = JSON.parse(raw || '[]') } catch { arr = [] }
+  const meta = arr.find((x): x is { _terms: string[] } => !!x && typeof x === 'object' && Array.isArray((x as { _terms?: unknown })._terms))
+  return { items: arr.filter(x => !(x && typeof x === 'object' && '_terms' in (x as object))) as SavedItem[], terms: meta ? meta._terms : null }
+}
 
 export default function Quotation() {
   const { t } = useLanguage()
@@ -157,6 +185,11 @@ export default function Quotation() {
   const [deletingRow, setDeletingRow] = useState<number | null>(null)
   const [workOrderQuote, setWorkOrderQuote] = useState<(QuoteRow & { rowIndex: number }) | null>(null)
   const [editingQuote, setEditingQuote] = useState<(QuoteRow & { rowIndex: number }) | null>(null)
+  // Remounts the form every time it's opened. Without this, clicking "New" while
+  // already editing left the old quotation's values in the form with the "editing"
+  // flag cleared, so Save created a duplicate instead of updating.
+  const [formKey, setFormKey] = useState(0)
+  const openCreate = (q: (QuoteRow & { rowIndex: number }) | null) => { setEditingQuote(q); setFormKey(k => k + 1); setTab('create') }
 
   const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(''), 3000) }
 
@@ -216,7 +249,7 @@ export default function Quotation() {
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${tab==='list' ? 'bg-white text-brand shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
             <List size={14}/> {t('quo.list')}
           </button>
-          <button onClick={() => { setEditingQuote(null); setTab('create') }}
+          <button onClick={() => openCreate(null)}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${tab==='create' ? 'bg-white text-brand shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
             <FileText size={14}/> {t('quo.new')}
           </button>
@@ -255,7 +288,7 @@ export default function Quotation() {
                   onChange={e => setSearch(e.target.value)}
                   className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-brand-200"
                 />
-                <button onClick={() => { setEditingQuote(null); setTab('create') }} className="btn-gold flex items-center gap-1.5 text-sm"><Plus size={13}/> {t('quo.new')}</button>
+                <button onClick={() => openCreate(null)} className="btn-gold flex items-center gap-1.5 text-sm"><Plus size={13}/> {t('quo.new')}</button>
               </div>
             </div>
             <div className="overflow-auto max-h-[65vh]">
@@ -307,7 +340,7 @@ export default function Quotation() {
                         </button>
                       </td>
                       <td>
-                        <button onClick={() => { setEditingQuote(q); setTab('create') }}
+                        <button onClick={() => openCreate(q)}
                           className="p-1.5 rounded-lg transition-colors hover:bg-brand-50 text-brand" title="Edit quotation">
                           <Pencil size={13}/>
                         </button>
@@ -329,6 +362,7 @@ export default function Quotation() {
 
       {tab === 'create' && (
         <CreateQuotation
+          key={formKey}
           existingQuotes={quotes}
           editing={editingQuote}
           onSaved={() => { setTab('list'); setEditingQuote(null); loadQuotes() }}
@@ -340,7 +374,7 @@ export default function Quotation() {
         <WorkOrderModal
           quote={workOrderQuote}
           onClose={() => setWorkOrderQuote(null)}
-          onEdit={() => { setEditingQuote(workOrderQuote); setWorkOrderQuote(null); setTab('create') }}
+          onEdit={() => { openCreate(workOrderQuote); setWorkOrderQuote(null) }}
         />
       )}
 
@@ -354,8 +388,7 @@ export default function Quotation() {
 }
 
 function WorkOrderModal({ quote: q, onClose, onEdit }: { quote: QuoteRow & { rowIndex: number }; onClose: () => void; onEdit: () => void }) {
-  let items: (Item & { area?: number; amount?: number })[] = []
-  try { items = JSON.parse(q.Items || '[]') } catch { items = [] }
+  const { items, terms: customTerms } = parseItems(q.Items)
   const isMicrolite = q['Finish Type'] === 'MICROLITE'
 
   const Section = ({ title, terms }: { title: string; terms: string[] }) => (
@@ -436,20 +469,42 @@ function WorkOrderModal({ quote: q, onClose, onEdit }: { quote: QuoteRow & { row
                       </tr>
                     </thead>
                     <tbody>
-                      {items.map((it, i) => (
-                        <tr key={i}>
-                          <td className="border-x border-gray-400 px-2 py-1.5">{i + 1}</td>
-                          <td className="border-x border-gray-400 px-2 py-1.5">{it.particulars}</td>
-                          <td className="border-x border-gray-400 px-2 py-1.5">{it.texture}</td>
-                          <td className="border-x border-gray-400 px-2 py-1.5 text-right">{it.length || 0}</td>
-                          <td className="border-x border-gray-400 px-2 py-1.5 text-right">{it.height || 0}</td>
-                          <td className="border-x border-gray-400 px-2 py-1.5 text-right">{it.nos || 0}</td>
-                          <td className="border-x border-gray-400 px-2 py-1.5 text-right">{it.coefficient || 0}</td>
-                          <td className="border-x border-gray-400 px-2 py-1.5 text-right">{(it.area ?? area(it)).toLocaleString('en-IN')}</td>
-                          <td className="border-x border-gray-400 px-2 py-1.5 text-right">{(it.rate || 0).toLocaleString('en-IN')}</td>
-                          <td className="border-x border-gray-400 px-2 py-1.5 text-right">{fmt(it.amount ?? amount(it))}</td>
-                        </tr>
-                      ))}
+                      {items.map((it, i) => {
+                        const multi = !!it.parts?.length
+                        const dash = <span className="text-gray-400">—</span>
+                        return (
+                          <Fragment key={i}>
+                            <tr>
+                              <td className="border-x border-gray-400 px-2 py-1.5">{i + 1}</td>
+                              <td className="border-x border-gray-400 px-2 py-1.5">{it.particulars}</td>
+                              <td className="border-x border-gray-400 px-2 py-1.5">{it.texture}</td>
+                              {it.lumpsum ? (
+                                <>
+                                  <td className="border-x border-gray-400 px-2 py-1.5 text-center" colSpan={6}>Lumpsum</td>
+                                </>
+                              ) : (
+                                <>
+                                  <td className="border-x border-gray-400 px-2 py-1.5 text-right">{multi ? dash : (it.length || 0)}</td>
+                                  <td className="border-x border-gray-400 px-2 py-1.5 text-right">{multi ? dash : (it.height || 0)}</td>
+                                  <td className="border-x border-gray-400 px-2 py-1.5 text-right">{multi ? dash : (it.nos || 0)}</td>
+                                  <td className="border-x border-gray-400 px-2 py-1.5 text-right">{it.coefficient || 0}</td>
+                                  <td className="border-x border-gray-400 px-2 py-1.5 text-right">{area(it).toLocaleString('en-IN')}</td>
+                                  <td className="border-x border-gray-400 px-2 py-1.5 text-right">{(it.rate || 0).toLocaleString('en-IN')}</td>
+                                </>
+                              )}
+                              <td className="border-x border-gray-400 px-2 py-1.5 text-right">{fmt(amount(it))}</td>
+                            </tr>
+                            {multi && !it.lumpsum && (
+                              <tr>
+                                <td className="border-x border-gray-400" />
+                                <td colSpan={9} className="border-x border-gray-400 px-2 pb-1.5 text-[11px] text-gray-500">
+                                  Measurements: {it.parts!.map(p => `${p.label ? p.label + ' ' : ''}${p.length || 0} × ${p.height || 0}${(p.nos || 1) !== 1 ? ' × ' + p.nos : ''}`).join('  +  ')}
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </td>
@@ -508,11 +563,11 @@ function WorkOrderModal({ quote: q, onClose, onEdit }: { quote: QuoteRow & { row
               <Section title="1. Material Shades & Nuances" terms={MICROLITE_SHADE_TERMS} />
               <Section title="2. Protection & Precaution" terms={MICROLITE_PROTECTION_TERMS} />
               <Section title="3. Workflow" terms={MICROLITE_WORKFLOW_TERMS} />
-              <Section title="4. Commercials" terms={MICROLITE_COMMERCIAL_TERMS} />
+              <Section title="4. Commercials" terms={customTerms ?? MICROLITE_COMMERCIAL_TERMS} />
             </>
           ) : (
             <>
-              <Section title="Commercial Terms" terms={COMMERCIAL_TERMS} />
+              <Section title="Commercial Terms" terms={customTerms ?? COMMERCIAL_TERMS} />
               <Section title="Execution & Logistic Terms & Conditions" terms={EXECUTION_TERMS} />
               <Section title="Important Terms & Conditions" terms={IMPORTANT_TERMS} />
               <Section title="Measurements — Terms & Condition" terms={MEASUREMENT_TERMS} />
@@ -553,7 +608,8 @@ function WorkOrderModal({ quote: q, onClose, onEdit }: { quote: QuoteRow & { row
 }
 
 function CreateQuotation({ existingQuotes, editing, onSaved, showToast }: { existingQuotes: QuoteRow[]; editing: (QuoteRow & { rowIndex: number }) | null; onSaved: () => void; showToast: (m: string) => void }) {
-  const editingItems: Item[] = editing ? (() => { try { return JSON.parse(editing.Items || '[]') } catch { return [newItem(1)] } })() : [newItem(1)]
+  const saved = editing ? parseItems(editing.Items) : null
+  const editingItems: Item[] = saved ? saved.items : [newItem(1)]
 
   const [quoteNo, setQuoteNo] = useState(() => editing ? editing['Quote No'] : nextQuoteNo(existingQuotes))
   const [date, setDate]     = useState(editing ? fmtDate(editing.Date) : today)
@@ -568,9 +624,14 @@ function CreateQuotation({ existingQuotes, editing, onSaved, showToast }: { exis
   const [items, setItems]   = useState<Item[]>(editingItems.length ? editingItems : [newItem(1)])
   const [nextId, setNextId] = useState(() => Math.max(0, ...editingItems.map(i => i.id)) + 1)
   const [saving, setSaving] = useState(false)
+  // null = use the standard commercial terms for the chosen finish type.
+  const [terms, setTerms] = useState<string[] | null>(saved?.terms ?? null)
+  const defaultTerms = finishType === 'MICROLITE' ? MICROLITE_COMMERCIAL_TERMS : COMMERCIAL_TERMS
+  const effectiveTerms = terms ?? defaultTerms
 
   const addRowItem = () => { setItems(p => [...p, newItem(nextId)]); setNextId(n => n + 1) }
   const removeItem = (id: number) => setItems(p => p.filter(i => i.id !== id))
+  const patchItem = (id: number, patch: Partial<Item>) => setItems(p => p.map(it => it.id === id ? { ...it, ...patch } : it))
   const updateItem = (id: number, field: keyof Item, value: string | number) => {
     setItems(p => p.map(it => {
       if (it.id !== id) return it
@@ -588,43 +649,79 @@ function CreateQuotation({ existingQuotes, editing, onSaved, showToast }: { exis
     }))
   }
 
+  const toggleLumpsum = (it: Item) => {
+    if (it.lumpsum) patchItem(it.id, { lumpsum: false, amountOverride: undefined })
+    else patchItem(it.id, { lumpsum: true, parts: undefined, areaOverride: undefined, amountOverride: amount(it) || undefined })
+  }
+
+  const toggleParts = (it: Item) => {
+    if (it.parts?.length) {
+      const first = it.parts[0]
+      patchItem(it.id, { parts: undefined, length: first.length, height: first.height, nos: first.nos || 1, areaOverride: undefined, amountOverride: undefined })
+    } else {
+      patchItem(it.id, { parts: [{ id: 1, label: '', length: it.length, height: it.height, nos: it.nos || 1 }], areaOverride: undefined, amountOverride: undefined })
+    }
+  }
+  const updatePart = (it: Item, partId: number, patch: Partial<Part>) =>
+    patchItem(it.id, { parts: it.parts!.map(pt => pt.id === partId ? { ...pt, ...patch } : pt), areaOverride: undefined, amountOverride: undefined })
+  const addPart = (it: Item) =>
+    patchItem(it.id, { parts: [...it.parts!, { id: Math.max(0, ...it.parts!.map(pt => pt.id)) + 1, label: '', length: 0, height: 0, nos: 1 }], areaOverride: undefined, amountOverride: undefined })
+  const removePart = (it: Item, partId: number) =>
+    patchItem(it.id, { parts: it.parts!.filter(pt => pt.id !== partId), areaOverride: undefined, amountOverride: undefined })
+
+  const setTermAt = (i: number, text: string) => setTerms((terms ?? defaultTerms).map((t, k) => k === i ? text : t))
+  const removeTermAt = (i: number) => setTerms((terms ?? defaultTerms).filter((_, k) => k !== i))
+  const addTerm = () => setTerms([...(terms ?? defaultTerms), ''])
+
   const total      = items.reduce((s, i) => s + amount(i), 0)
   const gst        = Math.round(total * 18) / 100
   const grandTotal = total + gst
 
+  // The Apps Script endpoint sometimes replies to a successful write with an
+  // HTML page, so the sheet is re-read to confirm. On edit, the new version is
+  // added and confirmed BEFORE the old row is removed (the old order -- delete
+  // first -- lost the quotation whenever the add then failed).
   const handleSave = async () => {
-    if (!clientName) return
+    if (!clientName || saving) return
     setSaving(true)
-    // No update-in-place API — editing deletes the old row then adds the new one.
-    if (editing) {
-      const delResult = await deleteRow('Quotations', editing.rowIndex)
-      if (delResult?.status !== 'ok') {
-        setSaving(false)
-        showToast(`✗ Failed to update: ${delResult?.error || 'unknown error'}`)
-        return
+    try {
+      const cleanTerms = terms ? terms.map(t => t.trim()).filter(Boolean) : null
+      const data = {
+        'Quote No': quoteNo,
+        Date: date,
+        'Client Name': clientName,
+        'Client Address': clientAddr,
+        'Client Phone': clientPhone,
+        'Client Email': clientEmail,
+        'Handled By': handledBy,
+        'Enquired By': enquiredBy,
+        'Finish Type': finishType,
+        Items: JSON.stringify([...items.map(i => ({ ...i, area: area(i), amount: amount(i) })), ...(cleanTerms ? [{ _terms: cleanTerms }] : [])]),
+        Total: total.toFixed(2),
+        GST: gst.toFixed(2),
+        'Grand Total': grandTotal.toFixed(2),
+        Status: editing?.Status || 'In Progress',
+        Notes: notes,
       }
+      const fields = ['Quote No', 'Items']
+      if (editing) {
+        const r = await replaceRowSafely('Quotations', editing, data, fields)
+        if (!r.saved) { showToast(`✗ Could not save ${quoteNo} — your original quotation is unchanged. Please try again.`); return }
+        if (!r.oldRemoved) showToast(`⚠ ${quoteNo} saved, but the old copy could not be removed — please delete the duplicate in the list`)
+        else showToast(`✓ ${quoteNo} updated for ${clientName}`)
+        onSaved()
+      } else {
+        const r = await addRowVerified('Quotations', data, fields)
+        if (!r.saved) { showToast('✗ Could not save the quotation. Please try again.'); return }
+        showToast(`✓ ${quoteNo} saved for ${clientName}`)
+        onSaved()
+      }
+    } finally {
+      setSaving(false)
     }
-    const result = await addRow('Quotations', {
-      'Quote No': quoteNo,
-      Date: date,
-      'Client Name': clientName,
-      'Client Address': clientAddr,
-      'Client Phone': clientPhone,
-      'Client Email': clientEmail,
-      'Handled By': handledBy,
-      'Enquired By': enquiredBy,
-      'Finish Type': finishType,
-      Items: JSON.stringify(items.map(i => ({ ...i, area: area(i), amount: amount(i) }))),
-      Total: total.toFixed(2),
-      GST: gst.toFixed(2),
-      'Grand Total': grandTotal.toFixed(2),
-      Status: editing?.Status || 'In Progress',
-      Notes: notes,
-    })
-    setSaving(false)
-    if (result?.status === 'ok') { showToast(`✓ ${quoteNo} ${editing ? 'updated' : 'saved'} for ${clientName}`); onSaved() }
-    else showToast(`✗ Failed to save: ${result?.error || 'unknown error'}`)
   }
+
+  const numCls = 'border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-right focus:outline-none focus:border-brand disabled:bg-gray-50 disabled:text-gray-300'
 
   return (
     <div className="space-y-4">
@@ -691,9 +788,9 @@ function CreateQuotation({ existingQuotes, editing, onSaved, showToast }: { exis
       </div>
 
       <div className="card p-0 overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 flex-wrap gap-1">
           <p className="font-semibold text-gray-700 text-sm">Item Details</p>
-          <p className="text-xs text-gray-400">Area = Length × Height × Nos × Co-efficient, but Area and Amount can also be typed directly</p>
+          <p className="text-xs text-gray-400">Area = Length × Height × Nos × Co-efficient. Tick <b>Lumpsum</b> to enter a fixed amount, or use <b>Multiple walls</b> to quote several measured areas as one line.</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -705,55 +802,97 @@ function CreateQuotation({ existingQuotes, editing, onSaved, showToast }: { exis
               </tr>
             </thead>
             <tbody>
-              {items.map(item => (
-                <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50/50">
-                  <td className="px-2 py-2 min-w-[160px]">
-                    <input value={item.particulars} onChange={e => updateItem(item.id,'particulars',e.target.value)}
-                      placeholder="e.g. Mania Pearla" className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand" />
-                  </td>
-                  <td className="px-2 py-2 min-w-[120px]">
-                    <input value={item.texture} onChange={e => updateItem(item.id,'texture',e.target.value)}
-                      placeholder="Texture" className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand" />
-                  </td>
-                  <td className="px-2 py-2 w-20">
-                    <input type="number" min={0} value={item.length || ''} placeholder="0" onChange={e => updateItem(item.id,'length',+e.target.value)}
-                      className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-right focus:outline-none focus:border-brand" />
-                  </td>
-                  <td className="px-2 py-2 w-20">
-                    <input type="number" min={0} value={item.height || ''} placeholder="0" onChange={e => updateItem(item.id,'height',+e.target.value)}
-                      className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-right focus:outline-none focus:border-brand" />
-                  </td>
-                  <td className="px-2 py-2 w-16">
-                    <input type="number" min={1} value={item.nos || ''} placeholder="1" onChange={e => updateItem(item.id,'nos',+e.target.value)}
-                      className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none focus:border-brand" />
-                  </td>
-                  <td className="px-2 py-2 w-20">
-                    <input type="number" min={0} step={0.1} value={item.coefficient || ''} placeholder="1" onChange={e => updateItem(item.id,'coefficient',+e.target.value)}
-                      className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-right focus:outline-none focus:border-brand" />
-                  </td>
-                  <td className="px-2 py-2 w-24">
-                    <input type="number" min={0} value={area(item) || ''} placeholder="0" onChange={e => updateItem(item.id,'areaOverride',+e.target.value)}
-                      title="Only know the total area? Type it directly here instead of Length/Height/Nos/Co-efficient."
-                      className={`w-24 border rounded-lg px-2 py-1.5 text-xs text-right focus:outline-none focus:border-brand ${item.areaOverride != null ? 'border-brand/50 bg-brand/5' : 'border-gray-200'}`} />
-                  </td>
-                  <td className="px-2 py-2 w-24">
-                    <input type="number" min={0} value={item.rate || ''} placeholder="0" onChange={e => updateItem(item.id,'rate',+e.target.value)}
-                      className="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-right focus:outline-none focus:border-brand" />
-                  </td>
-                  <td className="px-2 py-2 w-28">
-                    <input type="number" min={0} value={amount(item) || ''} placeholder="0" onChange={e => updateItem(item.id,'amountOverride',+e.target.value)}
-                      title="Only know the final amount? Type it directly here instead of Rate."
-                      className={`w-28 border rounded-lg px-2 py-1.5 text-xs text-right font-semibold focus:outline-none focus:border-brand ${item.amountOverride != null ? 'border-brand/50 bg-brand/5 text-brand' : 'border-gray-200 text-brand'}`} />
-                  </td>
-                  <td className="px-2 py-2">
-                    {items.length > 1 && (
-                      <button onClick={() => removeItem(item.id)} className="text-gray-300 hover:text-red-400 transition-colors p-1">
-                        <Trash2 size={14} />
-                      </button>
+              {items.map(item => {
+                const multi = !!item.parts?.length && !item.lumpsum
+                const dimsOff = !!item.lumpsum || multi
+                return (
+                  <Fragment key={item.id}>
+                    <tr className="border-b border-gray-50 hover:bg-gray-50/50">
+                      <td className="px-2 py-2 min-w-[170px]">
+                        <input value={item.particulars} onChange={e => updateItem(item.id,'particulars',e.target.value)}
+                          placeholder="e.g. Mania Pearla" className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand" />
+                        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                          <label className="flex items-center gap-1 text-[11px] text-gray-500 cursor-pointer">
+                            <input type="checkbox" checked={!!item.lumpsum} onChange={() => toggleLumpsum(item)} /> Lumpsum
+                          </label>
+                          {!item.lumpsum && (
+                            <button type="button" onClick={() => toggleParts(item)} className="text-[11px] text-brand font-semibold hover:underline">
+                              {multi ? '✕ Single measurement' : '+ Multiple walls'}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-2 py-2 min-w-[120px] align-top">
+                        <input value={item.texture} onChange={e => updateItem(item.id,'texture',e.target.value)}
+                          placeholder="Texture" className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand" />
+                      </td>
+                      <td className="px-2 py-2 w-20 align-top">
+                        <input type="number" min={0} disabled={dimsOff} value={dimsOff ? '' : (item.length || '')} placeholder={dimsOff ? '—' : '0'} onChange={e => updateItem(item.id,'length',+e.target.value)}
+                          className={`w-20 ${numCls}`} />
+                      </td>
+                      <td className="px-2 py-2 w-20 align-top">
+                        <input type="number" min={0} disabled={dimsOff} value={dimsOff ? '' : (item.height || '')} placeholder={dimsOff ? '—' : '0'} onChange={e => updateItem(item.id,'height',+e.target.value)}
+                          className={`w-20 ${numCls}`} />
+                      </td>
+                      <td className="px-2 py-2 w-16 align-top">
+                        <input type="number" min={1} disabled={dimsOff} value={dimsOff ? '' : (item.nos || '')} placeholder={dimsOff ? '—' : '1'} onChange={e => updateItem(item.id,'nos',+e.target.value)}
+                          className={`w-16 text-center ${numCls}`} />
+                      </td>
+                      <td className="px-2 py-2 w-20 align-top">
+                        <input type="number" min={0} step={0.1} disabled={!!item.lumpsum} value={item.lumpsum ? '' : (item.coefficient || '')} placeholder={item.lumpsum ? '—' : '1'} onChange={e => updateItem(item.id,'coefficient',+e.target.value)}
+                          className={`w-20 ${numCls}`} />
+                      </td>
+                      <td className="px-2 py-2 w-24 align-top">
+                        <input type="number" min={0} disabled={!!item.lumpsum} readOnly={multi} value={item.lumpsum ? '' : (area(item) || '')} placeholder={item.lumpsum ? '—' : '0'} onChange={e => updateItem(item.id,'areaOverride',+e.target.value)}
+                          title={multi ? 'Total of the wall measurements below' : 'Only know the total area? Type it directly here instead of Length/Height/Nos/Co-efficient.'}
+                          className={`w-24 ${numCls} ${item.areaOverride != null ? '!border-brand/50 bg-brand/5' : ''}`} />
+                      </td>
+                      <td className="px-2 py-2 w-24 align-top">
+                        <input type="number" min={0} disabled={!!item.lumpsum} value={item.lumpsum ? '' : (item.rate || '')} placeholder={item.lumpsum ? '—' : '0'} onChange={e => updateItem(item.id,'rate',+e.target.value)}
+                          className={`w-24 ${numCls}`} />
+                      </td>
+                      <td className="px-2 py-2 w-28 align-top">
+                        <input type="number" min={0} value={amount(item) || ''} placeholder={item.lumpsum ? 'Lumpsum ₹' : '0'} onChange={e => updateItem(item.id,'amountOverride',+e.target.value)}
+                          title={item.lumpsum ? 'Fixed lumpsum amount for this item' : 'Only know the final amount? Type it directly here instead of Rate.'}
+                          className={`w-28 border rounded-lg px-2 py-1.5 text-xs text-right font-semibold focus:outline-none focus:border-brand ${item.lumpsum || item.amountOverride != null ? 'border-brand/50 bg-brand/5 text-brand' : 'border-gray-200 text-brand'}`} />
+                      </td>
+                      <td className="px-2 py-2 align-top">
+                        {items.length > 1 && (
+                          <button onClick={() => removeItem(item.id)} className="text-gray-300 hover:text-red-400 transition-colors p-1">
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                    {multi && (
+                      <tr className="border-b border-gray-50 bg-gray-50/60">
+                        <td colSpan={10} className="px-4 py-3">
+                          <p className="text-[11px] text-gray-500 mb-2">Measure each wall / area separately — they are quoted as <b>one line</b> using the combined area × rate.</p>
+                          {item.parts!.map((pt, pi) => (
+                            <div key={pt.id} className="flex items-center gap-2 mb-1.5 flex-wrap">
+                              <span className="text-[11px] text-gray-400 w-5">{pi + 1}.</span>
+                              <input value={pt.label} onChange={e => updatePart(item, pt.id, { label: e.target.value })} placeholder="Wall / area (optional)"
+                                className="w-40 border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand" />
+                              <input type="number" min={0} value={pt.length || ''} placeholder="Length" onChange={e => updatePart(item, pt.id, { length: +e.target.value })} className={`w-20 ${numCls}`} />
+                              <span className="text-xs text-gray-400">×</span>
+                              <input type="number" min={0} value={pt.height || ''} placeholder="Height" onChange={e => updatePart(item, pt.id, { height: +e.target.value })} className={`w-20 ${numCls}`} />
+                              <span className="text-xs text-gray-400">×</span>
+                              <input type="number" min={1} value={pt.nos || ''} placeholder="Nos" onChange={e => updatePart(item, pt.id, { nos: +e.target.value })} className={`w-16 text-center ${numCls}`} />
+                              <span className="text-xs text-gray-500 w-24 text-right">= {((pt.length || 0) * (pt.height || 0) * (pt.nos || 0)).toLocaleString('en-IN')} sft</span>
+                              {item.parts!.length > 1 && (
+                                <button type="button" onClick={() => removePart(item, pt.id)} className="text-gray-300 hover:text-red-400 p-1"><Trash2 size={13} /></button>
+                              )}
+                            </div>
+                          ))}
+                          <button type="button" onClick={() => addPart(item)} className="flex items-center gap-1 text-brand text-[11px] font-semibold hover:underline mt-1">
+                            <Plus size={12} /> Add another wall
+                          </button>
+                        </td>
+                      </tr>
                     )}
-                  </td>
-                </tr>
-              ))}
+                  </Fragment>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -775,8 +914,31 @@ function CreateQuotation({ existingQuotes, editing, onSaved, showToast }: { exis
         </div>
       </div>
 
+      <div className="card space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <p className="font-semibold text-gray-700 text-sm">Commercial Terms &amp; Conditions</p>
+            <p className="text-[11px] text-gray-400">{terms ? 'Customised for this quotation.' : `Standard ${finishType} terms.`} Edit, remove or add conditions — they print on the Work Order.</p>
+          </div>
+          {terms && (
+            <button type="button" onClick={() => setTerms(null)} className="text-xs text-brand font-semibold hover:underline">Reset to standard</button>
+          )}
+        </div>
+        {effectiveTerms.map((t, i) => (
+          <div key={i} className="flex items-start gap-2">
+            <span className="text-xs text-gray-400 pt-2 w-5 shrink-0">{i + 1}.</span>
+            <textarea value={t} rows={2} onChange={e => setTermAt(i, e.target.value)}
+              className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand" />
+            <button type="button" onClick={() => removeTermAt(i)} className="text-gray-300 hover:text-red-400 p-1 mt-1" title="Remove this condition"><Trash2 size={14} /></button>
+          </div>
+        ))}
+        <button type="button" onClick={addTerm} className="flex items-center gap-1.5 text-brand text-xs font-semibold hover:bg-brand/5 px-3 py-1.5 rounded-lg transition-colors">
+          <Plus size={13} /> Add condition
+        </button>
+      </div>
+
       <div className="flex items-center justify-between py-2">
-        <button onClick={() => { setItems([newItem(1)]); setNextId(2); setClientName(''); setClientPhone(''); setClientEmail(''); setNotes(''); setHandledBy(''); setEnquiredBy(''); setFinishType('ACRALIYC') }}
+        <button onClick={() => { setItems([newItem(1)]); setNextId(2); setClientName(''); setClientPhone(''); setClientEmail(''); setNotes(''); setHandledBy(''); setEnquiredBy(''); setFinishType('ACRALIYC'); setTerms(null) }}
           className="btn-ghost text-sm">Clear</button>
         <button disabled={!clientName || saving} onClick={handleSave} className="btn-gold flex items-center gap-1.5 text-sm disabled:opacity-50">
           {saving ? 'Saving...' : editing ? 'Update Quotation' : 'Save Quotation → Sheet'}

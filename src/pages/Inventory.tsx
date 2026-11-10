@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Search, Warehouse, Package2, AlertCircle, Plus, X, CheckCheck, ArrowRight, RotateCcw, Truck, RefreshCw, Trash2, Pencil } from 'lucide-react'
+import { Search, Warehouse, Package2, AlertCircle, Plus, X, CheckCheck, ArrowRight, RotateCcw, Truck, RefreshCw, Trash2, Pencil, ClipboardList, GitCompare } from 'lucide-react'
 import { addRow, fetchSheet, deleteRow } from '../lib/api'
 import { useLanguage } from '../hooks/useLanguage'
+import DispatchRegister, { isDispatch } from '../components/inventory/DispatchRegister'
+import ProductSheetCheck from '../components/inventory/ProductSheetCheck'
 
 type StockLogRow = { Product: string; Location: string; Qty: number | string; Notes?: string; 'Updated By'?: string; Date?: string }
 type StockLogEntry = StockLogRow & { rowIndex: number }
@@ -103,7 +105,7 @@ const INITIAL_STOCK: StockItem[] = [
   { sl:85, name:'BIRLA WALL CARE', unit:'Kg', packSize:'30 Kg', godownQty:1, godownKg:30, seaAirQty:0, seaAirKg:0, dispatch:0, productReturn:0 },
 ]
 
-type Tab = 'stock' | 'addProduct' | 'dispatch' | 'return'
+type Tab = 'stock' | 'addProduct' | 'dispatch' | 'register' | 'return' | 'check'
 
 export default function Inventory() {
   const { t } = useLanguage()
@@ -129,7 +131,7 @@ export default function Inventory() {
   // New product form
   const [newProd, setNewProd]   = useState({ name:'', unit:'Ltr', packSize:'1 Ltr', category:'Wall Finishes' })
   // Dispatch form
-  const [dispForm, setDispForm] = useState({ product:'', qty:'', project:'', date: new Date().toLocaleDateString('en-IN'), notes:'' })
+  const [dispForm, setDispForm] = useState({ product:'', qty:'', project:'', client:'', date: new Date().toLocaleDateString('en-IN'), notes:'' })
   // Return form
   const [retForm, setRetForm]   = useState({ product:'', qty:'', reason:'', date: new Date().toLocaleDateString('en-IN'), notes:'' })
   // Transfer form
@@ -324,14 +326,15 @@ export default function Inventory() {
     setSaving(true)
     if (fromGodown) {
       setStock(prev => prev.map(s => s.name === dispForm.product ? { ...s, dispatch: s.dispatch + qty, godownQty: s.godownQty - qty, godownKg: s.godownKg - qty } : s))
-      await addRow('Stock', { Product: dispForm.product, Location: 'Dispatch', Qty: dispForm.qty, Notes: `Project: ${dispForm.project} | ${dispForm.notes}`, 'Updated By': 'Dashboard', Date: dispForm.date })
+      await addRow('Stock', { Product: dispForm.product, Location: 'Dispatch', Qty: dispForm.qty, Notes: `Project: ${dispForm.project.trim()} | Client: ${dispForm.client.trim()} | ${dispForm.notes}`, 'Updated By': 'Dashboard', Date: dispForm.date })
     } else {
       setStock(prev => prev.map(s => s.name === dispForm.product ? { ...s, dispatch: s.dispatch + qty, seaAirQty: s.seaAirQty - qty, seaAirKg: s.seaAirKg - qty } : s))
-      await addRow('Stock', { Product: dispForm.product, Location: 'Dispatch-SeaAir', Qty: dispForm.qty, Notes: `Project: ${dispForm.project} | ${dispForm.notes}`, 'Updated By': 'Dashboard', Date: dispForm.date })
+      await addRow('Stock', { Product: dispForm.product, Location: 'Dispatch-SeaAir', Qty: dispForm.qty, Notes: `Project: ${dispForm.project.trim()} | Client: ${dispForm.client.trim()} | ${dispForm.notes}`, 'Updated By': 'Dashboard', Date: dispForm.date })
     }
     setSaving(false)
     showToast(`✓ ${dispForm.product} — ${qty} units dispatched (from ${fromGodown ? 'Godown' : 'Sea Air'})`)
-    setDispForm({ product:'', qty:'', project:'', date: new Date().toLocaleDateString('en-IN'), notes:'' })
+    setDispForm({ product:'', qty:'', project:'', client:'', date: new Date().toLocaleDateString('en-IN'), notes:'' })
+    syncFromSheet(true)
   }
 
   const handleReturn = async () => {
@@ -343,7 +346,15 @@ export default function Inventory() {
     setSaving(false)
     showToast(`✓ ${retForm.product} — ${qty} units returned to Godown`)
     setRetForm({ product:'', qty:'', reason:'', date: new Date().toLocaleDateString('en-IN'), notes:'' })
+    syncFromSheet(true)
   }
+
+  // Reuse earlier client / project names so the same project is always spelled
+  // the same way -- the Dispatch Register groups by project name.
+  const dispatchNoteValues = (key: 'Project' | 'Client') =>
+    [...new Set(logEntries.filter(isDispatch).map(e => (e.Notes || '').match(new RegExp(`${key}:\\s*([^|]*)`))?.[1].trim() || '').filter(Boolean))].sort()
+  const dispatchProjects = dispatchNoteValues('Project')
+  const dispatchClients  = dispatchNoteValues('Client')
 
   const STATUS = (s: StockItem) => {
     const total = s.godownKg + s.seaAirKg
@@ -392,7 +403,9 @@ export default function Inventory() {
             { id:'stock',      label: t('inv.stockOverview'),  icon: Warehouse  },
             { id:'addProduct', label: t('inv.addProduct'),     icon: Plus       },
             { id:'dispatch',   label: t('inv.dispatch'),       icon: Truck      },
+            { id:'register',   label: 'Dispatch Register',     icon: ClipboardList },
             { id:'return',     label: t('inv.productReturn'),  icon: RotateCcw  },
+            { id:'check',      label: 'Product Sheet Check',   icon: GitCompare },
           ] as const).map(tabItem => (
             <button key={tabItem.id} onClick={() => setTab(tabItem.id)}
               className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors shrink-0 ${
@@ -623,8 +636,14 @@ export default function Inventory() {
               <div><label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color:'var(--text-3)'}}>Dispatch Date</label>
                 <input type="text" className="input-dark" value={dispForm.date} onChange={e=>setDispForm(f=>({...f,date:e.target.value}))}/></div>
             </div>
-            <div><label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color:'var(--text-3)'}}>Project / Site</label>
-              <input className="input-dark" placeholder="e.g. SRIKURUNJI INFRASTRUCTURE" value={dispForm.project} onChange={e=>setDispForm(f=>({...f,project:e.target.value}))}/></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color:'var(--text-3)'}}>Client Name</label>
+                <input className="input-dark" list="dispatch-clients" placeholder="e.g. Mr. Sharma" value={dispForm.client} onChange={e=>setDispForm(f=>({...f,client:e.target.value}))}/>
+                <datalist id="dispatch-clients">{dispatchClients.map(c => <option key={c} value={c}/>)}</datalist></div>
+              <div><label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color:'var(--text-3)'}}>Project / Site</label>
+                <input className="input-dark" list="dispatch-projects" placeholder="e.g. SRIKURUNJI INFRASTRUCTURE" value={dispForm.project} onChange={e=>setDispForm(f=>({...f,project:e.target.value}))}/>
+                <datalist id="dispatch-projects">{dispatchProjects.map(c => <option key={c} value={c}/>)}</datalist></div>
+            </div>
             <div><label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color:'var(--text-3)'}}>Notes</label>
               <input className="input-dark" placeholder="Optional" value={dispForm.notes} onChange={e=>setDispForm(f=>({...f,notes:e.target.value}))}/></div>
             <button disabled={!dispForm.product || !dispForm.qty || saving} onClick={handleDispatch}
@@ -632,6 +651,16 @@ export default function Inventory() {
               <Truck size={14}/>{saving ? 'Saving...' : 'Record Dispatch → Sheet'}
             </button>
           </div>
+        )}
+
+        {/* ── DISPATCH REGISTER ── */}
+        {tab === 'register' && (
+          <DispatchRegister entries={logEntries} onDelete={handleDeleteEntry} deletingRow={deletingRow} />
+        )}
+
+        {/* ── PRODUCT SHEET CHECK ── */}
+        {tab === 'check' && (
+          <ProductSheetCheck stock={stock} onChanged={() => syncFromSheet(true)} showToast={showToast} />
         )}
 
         {/* ── PRODUCT RETURN ── */}

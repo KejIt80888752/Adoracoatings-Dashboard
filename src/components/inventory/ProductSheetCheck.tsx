@@ -34,49 +34,67 @@ export default function ProductSheetCheck({ stock, onChanged, showToast }: {
   }, [])
   useEffect(() => { load() }, [load])
 
+  // The Products sheet lists one row per pack size (e.g. DAMASK 1 Ltr and
+  // DAMASK 2.5 Ltr), while Stock keeps a single line per name. So rows are
+  // grouped by name, and only an identical name + pack size counts as a duplicate.
   const report = useMemo(() => {
     const stockByNorm = new Map<string, StockLite>()
     for (const s of stock) if (!stockByNorm.has(normName(s.name))) stockByNorm.set(normName(s.name), s)
 
-    const byNorm = new Map<string, Product[]>()
+    const groups = new Map<string, Product[]>()
     for (const p of products) {
       const k = normName(p.Name)
-      byNorm.set(k, [...(byNorm.get(k) || []), p])
+      groups.set(k, [...(groups.get(k) || []), p])
     }
 
-    const duplicates: Product[][] = []
+    const duplicates: { remove: Product; keep: Product }[] = []
     const spelling: { product: Product; stock: StockLite; fuzzy: boolean }[] = []
     const packDiff: { product: Product; stock: StockLite }[] = []
-    let unmatchedProducts: Product[] = []
+    const onlyProducts: Product[] = []
     const usedStock = new Set<string>()
+    const unmatched: { key: string; rows: Product[] }[] = []
 
-    for (const [k, list] of byNorm) {
-      if (list.length > 1) duplicates.push(list)
-      const rep = list[0]
+    // Split a group into distinct pack-size rows plus exact duplicates. Rows
+    // already spelled exactly like the Stock name are kept in preference.
+    const dedupe = (rows: Product[], stockName?: string) => {
+      const sorted = stockName ? [...rows].sort((a, b) => Number(b.Name.trim() === stockName) - Number(a.Name.trim() === stockName)) : rows
+      const kept = new Map<string, Product>()
+      const uniq: Product[] = []
+      for (const r of sorted) {
+        const pk = normPack(r['Pack Size'])
+        if (kept.has(pk)) duplicates.push({ remove: r, keep: kept.get(pk)! })
+        else { kept.set(pk, r); uniq.push(r) }
+      }
+      return uniq
+    }
+
+    for (const [k, rows] of groups) {
       const st = stockByNorm.get(k)
-      if (!st) { unmatchedProducts.push(rep); continue }
+      if (!st) { unmatched.push({ key: k, rows }); continue }
       usedStock.add(k)
-      if (rep.Name.trim() !== st.name) spelling.push({ product: rep, stock: st, fuzzy: false })
-      if (normPack(rep['Pack Size']) !== normPack(st.packSize)) packDiff.push({ product: rep, stock: st })
+      const uniq = dedupe(rows, st.name)
+      for (const r of uniq) if (r.Name.trim() !== st.name) spelling.push({ product: r, stock: st, fuzzy: false })
+      if (!uniq.some(r => normPack(r['Pack Size']) === normPack(st.packSize))) packDiff.push({ product: uniq[0], stock: st })
     }
 
     let unmatchedStock = [...stockByNorm.entries()].filter(([k]) => !usedStock.has(k)).map(([, s]) => s)
 
-    // Near-identical names (e.g. MARMORINO / MARMARINO) that the simple
+    // Near-identical names (e.g. MARMORINO / MARMARINO) that the
     // punctuation-insensitive match above couldn't pair up.
-    const leftoverProducts: Product[] = []
-    for (const p of unmatchedProducts) {
-      const pk = normName(p.Name)
-      const hit = unmatchedStock.find(s => { const sk = normName(s.name); return Math.min(pk.length, sk.length) >= 6 && lev(pk, sk) <= 2 })
+    for (const g of unmatched) {
+      const close = (s: StockLite) => { const sk = normName(s.name); return Math.min(g.key.length, sk.length) >= 6 && lev(g.key, sk) <= 2 }
+      // Prefer a Stock product nothing else claimed; otherwise fall back to one already
+      // matched (a pack-size sibling spelled differently, e.g. MANIA PEARLA / MANIA (PERLA)).
+      const hit = unmatchedStock.find(close) ?? [...stockByNorm.values()].find(close)
+      const uniq = dedupe(g.rows, hit?.name)
       if (hit) {
-        spelling.push({ product: p, stock: hit, fuzzy: true })
         unmatchedStock = unmatchedStock.filter(s => s !== hit)
-        if (normPack(p['Pack Size']) !== normPack(hit.packSize)) packDiff.push({ product: p, stock: hit })
-      } else leftoverProducts.push(p)
+        for (const r of uniq) spelling.push({ product: r, stock: hit, fuzzy: true })
+        if (!uniq.some(r => normPack(r['Pack Size']) === normPack(hit.packSize))) packDiff.push({ product: uniq[0], stock: hit })
+      } else onlyProducts.push(uniq[0])
     }
-    unmatchedProducts = leftoverProducts
 
-    return { duplicates, spelling, packDiff, onlyProducts: unmatchedProducts, onlyStock: unmatchedStock }
+    return { duplicates, spelling, packDiff, onlyProducts, onlyStock: unmatchedStock }
   }, [products, stock])
 
   const run = async (key: string, fn: () => Promise<string | null>) => {
@@ -173,7 +191,7 @@ export default function ProductSheetCheck({ stock, onChanged, showToast }: {
         <div>
           <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>Product Sheet vs Stock — mismatch check</p>
           <p className="text-xs" style={{ color: 'var(--text-4)' }}>
-            Compares the Products sheet ({products.length} rows) with the Stock list ({stock.length} products). Stock quantities are matched by product name, so names must agree.
+            Compares the Products sheet ({products.length} rows, one per pack size) with the Stock list ({stock.length} products). Stock quantities are matched by product name, so names must agree.
           </p>
         </div>
         <button onClick={() => { load(); onChanged() }} disabled={loading}
@@ -230,13 +248,13 @@ export default function ProductSheetCheck({ stock, onChanged, showToast }: {
         ))}
       </Section>
 
-      <Section title="Duplicate rows in Products" count={report.duplicates.length}
-        hint="The same product appears more than once. Remove the extra copy.">
-        {report.duplicates.map(list => list.slice(1).map(p => (
+      <Section title="Exact duplicate rows in Products" count={report.duplicates.length}
+        hint="Same name and same pack size listed more than once (different pack sizes are fine and are not shown). Remove the extra copy.">
+        {report.duplicates.map(({ remove: p }) => (
           <Line key={p.rowIndex} action={<button className="text-xs px-2.5 py-1 rounded-lg border font-medium hover:bg-red-50 text-red-500 disabled:opacity-40" disabled={!!busy} onClick={() => removeDuplicate(p)}>{busy === `dup-${p.rowIndex}` ? 'Removing…' : 'Remove duplicate'}</button>}>
-            <b>{p.Name}</b> <span style={{ color: 'var(--text-4)' }}>· row {p.rowIndex} · {p['Pack Size']} · {list.length} copies</span>
+            <b>{p.Name}</b> <span style={{ color: 'var(--text-4)' }}>· row {p.rowIndex} · {p['Pack Size']}</span>
           </Line>
-        )))}
+        ))}
       </Section>
     </div>
   )

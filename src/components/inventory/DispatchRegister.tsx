@@ -130,3 +130,53 @@ export default function DispatchRegister({ entries, onDelete, deletingRow }: {
     </div>
   )
 }
+
+// Flat, numbered list of every dispatch (newest first) shown under the Dispatch
+// form. S.No is the chronological position, so a given dispatch keeps its number.
+export function DispatchList({ entries, onDelete, deletingRow }: {
+  entries: DispatchLogEntry[]; onDelete: (e: DispatchLogEntry) => void; deletingRow: number | null
+}) {
+  const rows = entries.filter(isDispatch).sort((a, b) => a.rowIndex - b.rowIndex)
+    .map((entry, i) => ({ entry, sno: i + 1, ...parseNotes(entry.Notes), from: entry.Location === 'Dispatch-SeaAir' ? 'Sea Air' : 'Godown' }))
+    .reverse()
+  return (
+    <div>
+      <p className="text-sm font-semibold mb-2" style={{ color: 'var(--text-1)' }}>Dispatch List <span className="text-xs font-normal" style={{ color: 'var(--text-4)' }}>({rows.length})</span></p>
+      <div className="overflow-auto max-h-[50vh] rounded-xl border" style={{ borderColor: 'var(--border-2)' }}>
+        <table className="tbl tbl-stable">
+          <colgroup>
+            <col style={{ width: 56 }} /><col style={{ width: 100 }} /><col style={{ width: 160 }} /><col style={{ width: 180 }} />
+            <col style={{ width: 240 }} /><col style={{ width: 60 }} /><col style={{ width: 80 }} /><col style={{ width: 52 }} />
+          </colgroup>
+          <thead>
+            <tr>
+              <th className="text-center">S.No</th><th>Date</th><th>Client</th><th>Project</th><th>Material</th>
+              <th className="text-center">Qty</th><th>From</th>
+              <th className="text-center tbl-icon-col whitespace-normal leading-tight">Delete</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 && <tr><td colSpan={8} className="text-center py-6" style={{ color: 'var(--text-4)' }}>No dispatches recorded yet</td></tr>}
+            {rows.map(r => (
+              <tr key={r.entry.rowIndex}>
+                <td className="text-center text-xs font-semibold" style={{ color: 'var(--text-3)' }}>{r.sno}</td>
+                <td className="text-xs" style={{ color: 'var(--text-4)' }}>{fmtDate(r.entry.Date)}</td>
+                <td className="text-xs" style={{ color: 'var(--text-2)' }}>{r.client || '—'}</td>
+                <td className="text-xs" style={{ color: 'var(--text-2)' }}>{r.project || '—'}</td>
+                <td className="font-medium" style={{ color: 'var(--text-1)' }}>{r.entry.Product}</td>
+                <td className="text-center font-semibold text-red-500">{Number(r.entry.Qty) || 0}</td>
+                <td className="text-xs" style={{ color: 'var(--text-3)' }}>{r.from}</td>
+                <td className="text-center">
+                  <button onClick={() => onDelete(r.entry)} disabled={deletingRow === r.entry.rowIndex}
+                    className="p-1.5 rounded-lg transition-colors hover:bg-red-50 text-red-500 disabled:opacity-40" title="Delete this dispatch entry">
+                    <Trash2 size={13} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}

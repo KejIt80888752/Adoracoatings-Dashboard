@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Search, Warehouse, Package2, AlertCircle, Plus, X, CheckCheck, ArrowRight, RotateCcw, Truck, RefreshCw, Trash2, Pencil, ClipboardList, GitCompare } from 'lucide-react'
 import { addRow, fetchSheet, deleteRow } from '../lib/api'
 import { useLanguage } from '../hooks/useLanguage'
-import DispatchRegister, { isDispatch } from '../components/inventory/DispatchRegister'
+import DispatchRegister, { DispatchList, isDispatch } from '../components/inventory/DispatchRegister'
 import ProductSheetCheck from '../components/inventory/ProductSheetCheck'
 
 type StockLogRow = { Product: string; Location: string; Qty: number | string; Notes?: string; 'Updated By'?: string; Date?: string }
@@ -621,7 +621,8 @@ export default function Inventory() {
 
         {/* ── DISPATCH ── */}
         {tab === 'dispatch' && (
-          <div className="p-6 max-w-lg space-y-4">
+          <div className="p-6 space-y-6">
+          <div className="max-w-lg space-y-4">
             <div><p className="text-sm font-semibold mb-1" style={{color:'var(--text-1)'}}>Dispatch Product to Site</p>
               <p className="text-xs" style={{color:'var(--text-4)'}}>Record product dispatched from Godown to project site</p></div>
             <div><label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color:'var(--text-3)'}}>Product *</label>
@@ -650,6 +651,8 @@ export default function Inventory() {
               className="btn-gold w-full py-2.5 disabled:opacity-50 flex items-center justify-center gap-2">
               <Truck size={14}/>{saving ? 'Saving...' : 'Record Dispatch → Sheet'}
             </button>
+          </div>
+          <DispatchList entries={logEntries} onDelete={handleDeleteEntry} deletingRow={deletingRow} />
           </div>
         )}
 

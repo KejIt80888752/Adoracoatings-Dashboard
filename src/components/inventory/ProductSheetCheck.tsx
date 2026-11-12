@@ -200,6 +200,21 @@ export default function ProductSheetCheck({ stock, onChanged, showToast }: {
         </button>
       </div>
 
+      <details className="rounded-xl border text-xs" style={{ borderColor: 'var(--border-2)', color: 'var(--text-2)' }} open>
+        <summary className="px-4 py-2.5 cursor-pointer font-semibold" style={{ color: 'var(--text-1)' }}>How to use this page</summary>
+        <div className="px-4 pb-3 space-y-1.5">
+          <p>Stock quantities are tied to the product <b>name</b>, so the Products sheet and the Stock list must agree. Work through the sections below from top to bottom; each fixed row disappears from the list, and when everything matches you will see &ldquo;Products and Stock match&rdquo;.</p>
+          <ol className="list-decimal pl-5 space-y-1">
+            <li><b>Same product, spelled differently</b> &ndash; check the two names are the same product, then click <b>Use Stock name</b>. The Products entry is renamed to match Stock.</li>
+            <li><b>Pack size differs</b> &ndash; decide which size is correct. Click <b>Use Stock pack size</b> to copy Stock&rsquo;s size into Products, or leave it and correct the Stock item with the pencil icon on the Stock Overview tab.</li>
+            <li><b>In Products but not in Stock</b> &ndash; click <b>Add to Stock</b> to track it (starts at 0). If it is really the same as an existing Stock item under another name, do not add it.</li>
+            <li><b>In Stock but not in Products</b> &ndash; click <b>Add to Products</b> only for items you quote (brushes, tape and rollers can stay stock-only). Then set its category on the Products page.</li>
+            <li><b>Exact duplicate rows</b> &ndash; click <b>Remove duplicate</b> to delete the extra copy. The same product in different pack sizes is normal and is not listed here.</li>
+          </ol>
+          <p>Nothing changes until you click a button, and stock quantities are never altered by this page. Use <b>Re-check</b> to refresh after edits made elsewhere.</p>
+        </div>
+      </details>
+
       {!loading && total === 0 && (
         <div className="flex items-center gap-2 text-sm text-green-600 py-6 justify-center"><CheckCircle2 size={16} /> Products and Stock match.</div>
       )}

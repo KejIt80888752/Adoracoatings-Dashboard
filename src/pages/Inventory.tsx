@@ -628,7 +628,7 @@ export default function Inventory() {
             <div><label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color:'var(--text-3)'}}>Product *</label>
               <select className="input-dark" value={dispForm.product} onChange={e=>setDispForm(f=>({...f,product:e.target.value}))}>
                 <option value="">— Select Product —</option>
-                {stock.filter(s=>s.godownQty>0 || s.seaAirQty>0).map(s=><option key={s.sl} value={s.name}>{s.name} (Godown: {s.godownQty}, Sea Air: {s.seaAirQty})</option>)}
+                {stock.map((s,i)=><option key={s.sl} value={s.name}>{i+1}. {s.name} (Godown: {s.godownQty}, Sea Air: {s.seaAirQty})</option>)}
               </select></div>
             <div className="grid grid-cols-2 gap-3">
               <div><label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color:'var(--text-3)'}}>Quantity *</label>
@@ -674,7 +674,7 @@ export default function Inventory() {
             <div><label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color:'var(--text-3)'}}>Product *</label>
               <select className="input-dark" value={retForm.product} onChange={e=>setRetForm(f=>({...f,product:e.target.value}))}>
                 <option value="">— Select Product —</option>
-                {stock.map(s=><option key={s.sl} value={s.name}>{s.name}</option>)}
+                {stock.map((s,i)=><option key={s.sl} value={s.name}>{i+1}. {s.name}</option>)}
               </select></div>
             <div className="grid grid-cols-2 gap-3">
               <div><label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color:'var(--text-3)'}}>Quantity *</label>

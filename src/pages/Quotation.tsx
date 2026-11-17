@@ -164,15 +164,45 @@ const amount = (it: Item) => {
   return it.amountOverride != null ? it.amountOverride : Math.round(area(it) * it.rate * 100) / 100
 }
 
+
+// ── Every fixed block of the printed quotation can be edited per quotation ────
+type DocOverrides = Record<string, string[] | string>
+const PLEASE_NOTE = ['The validity of this quotation is 4 days.', 'Rates will vary as per the colour shade — exact rates shall be quoted once the colours are decided.']
+const LIST_DEFAULTS: Record<string, string[]> = {
+  please: PLEASE_NOTE, commercial: COMMERCIAL_TERMS, execution: EXECUTION_TERMS, important: IMPORTANT_TERMS, measurement: MEASUREMENT_TERMS,
+  site: MICROLITE_SITE_TERMS, client: MICROLITE_CLIENT_TERMS, shade: MICROLITE_SHADE_TERMS, protection: MICROLITE_PROTECTION_TERMS,
+  workflow: MICROLITE_WORKFLOW_TERMS, mcommercial: MICROLITE_COMMERCIAL_TERMS,
+}
+const TEXT_DEFAULTS: Record<string, string> = { payment: PAYMENT_TERMS, bank: BANK_DETAILS, address: COMPANY_ADDRESS, intro: MICROLITE_PREPARATION_INTRO }
+const LIST_TITLES: Record<string, string> = {
+  please: 'Please Note', commercial: 'Commercial Terms', execution: 'Execution & Logistic Terms & Conditions', important: 'Important Terms & Conditions',
+  measurement: 'Measurements — Terms & Condition', site: '1. Site Condition & Preparation', client: '2. Client Responsibilities',
+  shade: '1. Material Shades & Nuances', protection: '2. Protection & Precaution', workflow: '3. Workflow', mcommercial: '4. Commercials',
+}
+const TEXT_TITLES: Record<string, string> = { payment: 'Payment Terms', bank: 'Bank Details', address: 'Company Address', intro: 'Preparation — introduction' }
+const DOC_LISTS = (micro: boolean) => micro ? ['please', 'site', 'client', 'shade', 'protection', 'workflow', 'mcommercial'] : ['please', 'commercial', 'execution', 'important', 'measurement']
+const DOC_TEXTS = (micro: boolean) => micro ? ['intro', 'payment', 'bank', 'address'] : ['payment', 'bank', 'address']
+
 // Custom commercial terms ride along inside the Items JSON as one extra
 // {_terms:[...]} element: the Quotations sheet has fixed columns and the
 // backend drops any key that isn't already a header.
 type SavedItem = Item & { area?: number; amount?: number }
-const parseItems = (raw: string): { items: SavedItem[]; terms: string[] | null } => {
+const parseItems = (raw: string): { items: SavedItem[]; terms: string[] | null; doc: DocOverrides } => {
   let arr: unknown[] = []
   try { arr = JSON.parse(raw || '[]') } catch { arr = [] }
-  const meta = arr.find((x): x is { _terms: string[] } => !!x && typeof x === 'object' && Array.isArray((x as { _terms?: unknown })._terms))
-  return { items: arr.filter(x => !(x && typeof x === 'object' && '_terms' in (x as object))) as SavedItem[], terms: meta ? meta._terms : null }
+  const isObj = (x: unknown): x is Record<string, unknown> => !!x && typeof x === 'object'
+  const meta = arr.find(x => isObj(x) && Array.isArray(x._terms)) as { _terms: string[] } | undefined
+  const docEl = arr.find(x => isObj(x) && isObj(x._doc)) as { _doc: DocOverrides } | undefined
+  return {
+    items: arr.filter(x => !(isObj(x) && ('_terms' in x || '_doc' in x))) as SavedItem[],
+    terms: meta ? meta._terms : null,
+    doc: docEl ? docEl._doc : {},
+  }
+}
+// Quotations saved earlier kept only an edited commercial list in `_terms`.
+const mergeDoc = (doc: DocOverrides, terms: string[] | null, micro: boolean): DocOverrides => {
+  const k = micro ? 'mcommercial' : 'commercial'
+  return terms && !(k in doc) ? { ...doc, [k]: terms } : doc
 }
 
 export default function Quotation() {
@@ -388,8 +418,12 @@ export default function Quotation() {
 }
 
 function WorkOrderModal({ quote: q, onClose, onEdit }: { quote: QuoteRow & { rowIndex: number }; onClose: () => void; onEdit: () => void }) {
-  const { items, terms: customTerms } = parseItems(q.Items)
+  const parsed = parseItems(q.Items)
+  const items = parsed.items
   const isMicrolite = q['Finish Type'] === 'MICROLITE'
+  const ov = mergeDoc(parsed.doc, parsed.terms, isMicrolite)
+  const L = (k: string) => (Array.isArray(ov[k]) ? ov[k] as string[] : LIST_DEFAULTS[k])
+  const T = (k: string) => (typeof ov[k] === 'string' ? ov[k] as string : TEXT_DEFAULTS[k])
 
   const Section = ({ title, terms }: { title: string; terms: string[] }) => (
     <div className="border border-gray-400 mb-4">
@@ -480,7 +514,8 @@ function WorkOrderModal({ quote: q, onClose, onEdit }: { quote: QuoteRow & { row
                               <td className="border-x border-gray-400 px-2 py-1.5">{it.texture}</td>
                               {it.lumpsum ? (
                                 <>
-                                  <td className="border-x border-gray-400 px-2 py-1.5 text-center" colSpan={6}>Lumpsum</td>
+                                  {[0, 1, 2, 3, 4].map(n => <td key={n} className="border-x border-gray-400 px-2 py-1.5 text-center">{dash}</td>)}
+                                  <td className="border-x border-gray-400 px-2 py-1.5 text-center font-semibold">Lumpsum</td>
                                 </>
                               ) : (
                                 <>
@@ -494,14 +529,20 @@ function WorkOrderModal({ quote: q, onClose, onEdit }: { quote: QuoteRow & { row
                               )}
                               <td className="border-x border-gray-400 px-2 py-1.5 text-right">{fmt(amount(it))}</td>
                             </tr>
-                            {multi && !it.lumpsum && (
-                              <tr>
+                            {multi && !it.lumpsum && it.parts!.map((p, k) => (
+                              <tr key={p.id} className="text-gray-600">
+                                <td className="border-x border-gray-400 px-2 py-1 text-gray-400">{i + 1}.{k + 1}</td>
+                                <td className="border-x border-gray-400 px-2 py-1 pl-4">{p.label || `Wall ${k + 1}`}</td>
                                 <td className="border-x border-gray-400" />
-                                <td colSpan={9} className="border-x border-gray-400 px-2 pb-1.5 text-[11px] text-gray-500">
-                                  Measurements: {it.parts!.map(p => `${p.label ? p.label + ' ' : ''}${p.length || 0} × ${p.height || 0}${(p.nos || 1) !== 1 ? ' × ' + p.nos : ''}`).join('  +  ')}
-                                </td>
+                                <td className="border-x border-gray-400 px-2 py-1 text-right">{p.length || 0}</td>
+                                <td className="border-x border-gray-400 px-2 py-1 text-right">{p.height || 0}</td>
+                                <td className="border-x border-gray-400 px-2 py-1 text-right">{p.nos || 1}</td>
+                                <td className="border-x border-gray-400" />
+                                <td className="border-x border-gray-400 px-2 py-1 text-right">{Math.round((p.length || 0) * (p.height || 0) * (p.nos || 1) * 100) / 100}</td>
+                                <td className="border-x border-gray-400" />
+                                <td className="border-x border-gray-400" />
                               </tr>
-                            )}
+                            ))}
                           </Fragment>
                         )
                       })}
@@ -524,8 +565,7 @@ function WorkOrderModal({ quote: q, onClose, onEdit }: { quote: QuoteRow & { row
                 <td colSpan={2} className="border-x border-b border-gray-400 p-2 bg-yellow-50">
                   <b>PLEASE NOTE:</b>
                   <ol className="mt-1 space-y-0.5">
-                    <li>1. The validity of this quotation is 4 days.</li>
-                    <li>2. Rates will vary as per the colour shade — exact rates shall be quoted once the colours are decided.</li>
+                    {L('please').map((t, i) => <li key={i}>{i + 1}. {t}</li>)}
                   </ol>
                 </td>
               </tr>
@@ -541,9 +581,9 @@ function WorkOrderModal({ quote: q, onClose, onEdit }: { quote: QuoteRow & { row
                   <table className="w-full text-xs border-collapse">
                     <tbody>
                       <tr className="whitespace-pre-line">
-                        <td className="p-2 align-top w-1/3"><b>BANK DETAILS:</b><br/>{BANK_DETAILS}</td>
-                        <td className="p-2 align-top w-1/3 border-x border-gray-400"><b>ADDRESS:</b><br/>{COMPANY_ADDRESS}</td>
-                        <td className="p-2 align-top w-1/3"><b>PAYMENT TERMS:</b><br/>{PAYMENT_TERMS}</td>
+                        <td className="p-2 align-top w-1/3"><b>BANK DETAILS:</b><br/>{T('bank')}</td>
+                        <td className="p-2 align-top w-1/3 border-x border-gray-400"><b>ADDRESS:</b><br/>{T('address')}</td>
+                        <td className="p-2 align-top w-1/3"><b>PAYMENT TERMS:</b><br/>{T('payment')}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -555,22 +595,22 @@ function WorkOrderModal({ quote: q, onClose, onEdit }: { quote: QuoteRow & { row
           {isMicrolite ? (
             <>
               <h3 className="text-xs font-bold text-brand bg-gray-50 border border-gray-400 px-2 py-1.5 mb-4">Terms & Condition</h3>
-              <div className="border border-gray-400 mb-4 p-2 text-xs text-gray-700">{MICROLITE_PREPARATION_INTRO}</div>
+              <div className="border border-gray-400 mb-4 p-2 text-xs text-gray-700">{T('intro')}</div>
               <h3 className="text-xs font-bold text-brand bg-gray-50 border border-gray-400 px-2 py-1.5 mb-4">Preparation</h3>
-              <Section title="1. Site Condition & Preparation" terms={MICROLITE_SITE_TERMS} />
-              <Section title="2. Client Responsibilities" terms={MICROLITE_CLIENT_TERMS} />
+              <Section title={LIST_TITLES.site} terms={L('site')} />
+              <Section title={LIST_TITLES.client} terms={L('client')} />
               <h3 className="text-xs font-bold text-brand bg-gray-50 border border-gray-400 px-2 py-1.5 mb-4">A few things to know before you take the leap…</h3>
-              <Section title="1. Material Shades & Nuances" terms={MICROLITE_SHADE_TERMS} />
-              <Section title="2. Protection & Precaution" terms={MICROLITE_PROTECTION_TERMS} />
-              <Section title="3. Workflow" terms={MICROLITE_WORKFLOW_TERMS} />
-              <Section title="4. Commercials" terms={customTerms ?? MICROLITE_COMMERCIAL_TERMS} />
+              <Section title={LIST_TITLES.shade} terms={L('shade')} />
+              <Section title={LIST_TITLES.protection} terms={L('protection')} />
+              <Section title={LIST_TITLES.workflow} terms={L('workflow')} />
+              <Section title={LIST_TITLES.mcommercial} terms={L('mcommercial')} />
             </>
           ) : (
             <>
-              <Section title="Commercial Terms" terms={customTerms ?? COMMERCIAL_TERMS} />
-              <Section title="Execution & Logistic Terms & Conditions" terms={EXECUTION_TERMS} />
-              <Section title="Important Terms & Conditions" terms={IMPORTANT_TERMS} />
-              <Section title="Measurements — Terms & Condition" terms={MEASUREMENT_TERMS} />
+              <Section title={LIST_TITLES.commercial} terms={L('commercial')} />
+              <Section title={LIST_TITLES.execution} terms={L('execution')} />
+              <Section title={LIST_TITLES.important} terms={L('important')} />
+              <Section title={LIST_TITLES.measurement} terms={L('measurement')} />
             </>
           )}
 
@@ -624,10 +664,13 @@ function CreateQuotation({ existingQuotes, editing, onSaved, showToast }: { exis
   const [items, setItems]   = useState<Item[]>(editingItems.length ? editingItems : [newItem(1)])
   const [nextId, setNextId] = useState(() => Math.max(0, ...editingItems.map(i => i.id)) + 1)
   const [saving, setSaving] = useState(false)
-  // null = use the standard commercial terms for the chosen finish type.
-  const [terms, setTerms] = useState<string[] | null>(saved?.terms ?? null)
-  const defaultTerms = finishType === 'MICROLITE' ? MICROLITE_COMMERCIAL_TERMS : COMMERCIAL_TERMS
-  const effectiveTerms = terms ?? defaultTerms
+  // Only the blocks the user changed are stored; everything else prints the standard text.
+  const [doc, setDoc] = useState<DocOverrides>(() => saved ? mergeDoc(saved.doc, saved.terms, editing?.['Finish Type'] === 'MICROLITE') : {})
+  const isMicro = finishType === 'MICROLITE'
+  const listOf = (k: string) => (Array.isArray(doc[k]) ? doc[k] as string[] : LIST_DEFAULTS[k])
+  const textOf = (k: string) => (typeof doc[k] === 'string' ? doc[k] as string : TEXT_DEFAULTS[k])
+  const setKey = (k: string, v: string[] | string) => setDoc(d => ({ ...d, [k]: v }))
+  const resetKey = (k: string) => setDoc(d => { const n = { ...d }; delete n[k]; return n })
 
   const addRowItem = () => { setItems(p => [...p, newItem(nextId)]); setNextId(n => n + 1) }
   const removeItem = (id: number) => setItems(p => p.filter(i => i.id !== id))
@@ -669,9 +712,6 @@ function CreateQuotation({ existingQuotes, editing, onSaved, showToast }: { exis
   const removePart = (it: Item, partId: number) =>
     patchItem(it.id, { parts: it.parts!.filter(pt => pt.id !== partId), areaOverride: undefined, amountOverride: undefined })
 
-  const setTermAt = (i: number, text: string) => setTerms((terms ?? defaultTerms).map((t, k) => k === i ? text : t))
-  const removeTermAt = (i: number) => setTerms((terms ?? defaultTerms).filter((_, k) => k !== i))
-  const addTerm = () => setTerms([...(terms ?? defaultTerms), ''])
 
   const total      = items.reduce((s, i) => s + amount(i), 0)
   const gst        = Math.round(total * 18) / 100
@@ -685,7 +725,12 @@ function CreateQuotation({ existingQuotes, editing, onSaved, showToast }: { exis
     if (!clientName || saving) return
     setSaving(true)
     try {
-      const cleanTerms = terms ? terms.map(t => t.trim()).filter(Boolean) : null
+      const cleanDoc: DocOverrides = {}
+      for (const [k, v] of Object.entries(doc)) {
+        const relevant = DOC_LISTS(isMicro).includes(k) || DOC_TEXTS(isMicro).includes(k)
+        if (!relevant) continue
+        cleanDoc[k] = Array.isArray(v) ? v.map(x => x.trim()).filter(Boolean) : v.trim()
+      }
       const data = {
         'Quote No': quoteNo,
         Date: date,
@@ -696,7 +741,7 @@ function CreateQuotation({ existingQuotes, editing, onSaved, showToast }: { exis
         'Handled By': handledBy,
         'Enquired By': enquiredBy,
         'Finish Type': finishType,
-        Items: JSON.stringify([...items.map(i => ({ ...i, area: area(i), amount: amount(i) })), ...(cleanTerms ? [{ _terms: cleanTerms }] : [])]),
+        Items: JSON.stringify([...items.map(i => ({ ...i, area: area(i), amount: amount(i) })), ...(Object.keys(cleanDoc).length ? [{ _doc: cleanDoc }] : [])]),
         Total: total.toFixed(2),
         GST: gst.toFixed(2),
         'Grand Total': grandTotal.toFixed(2),
@@ -915,30 +960,47 @@ function CreateQuotation({ existingQuotes, editing, onSaved, showToast }: { exis
       </div>
 
       <div className="card space-y-3">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div>
-            <p className="font-semibold text-gray-700 text-sm">Commercial Terms &amp; Conditions</p>
-            <p className="text-[11px] text-gray-400">{terms ? 'Customised for this quotation.' : `Standard ${finishType} terms.`} Edit, remove or add conditions — they print on the Work Order.</p>
-          </div>
-          {terms && (
-            <button type="button" onClick={() => setTerms(null)} className="text-xs text-brand font-semibold hover:underline">Reset to standard</button>
-          )}
+        <div>
+          <p className="font-semibold text-gray-700 text-sm">Terms, Conditions &amp; Payment Terms</p>
+          <p className="text-[11px] text-gray-400">Everything that prints under the item table can be edited here, for this quotation only. Sections you do not touch print the standard text.</p>
         </div>
-        {effectiveTerms.map((t, i) => (
-          <div key={i} className="flex items-start gap-2">
-            <span className="text-xs text-gray-400 pt-2 w-5 shrink-0">{i + 1}.</span>
-            <textarea value={t} rows={2} onChange={e => setTermAt(i, e.target.value)}
-              className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand" />
-            <button type="button" onClick={() => removeTermAt(i)} className="text-gray-300 hover:text-red-400 p-1 mt-1" title="Remove this condition"><Trash2 size={14} /></button>
-          </div>
+        {DOC_TEXTS(isMicro).map(k => (
+          <details key={k} className="border border-gray-200 rounded-lg" open={k === 'payment'}>
+            <summary className="px-3 py-2 text-xs font-semibold text-gray-700 cursor-pointer flex items-center justify-between">
+              <span>{TEXT_TITLES[k]}{k in doc && <span className="ml-2 text-brand font-normal">(edited)</span>}</span>
+              {k in doc && <button type="button" onClick={e => { e.preventDefault(); resetKey(k) }} className="text-brand font-semibold hover:underline">Reset</button>}
+            </summary>
+            <div className="p-3 pt-0">
+              <textarea value={textOf(k)} rows={k === 'intro' ? 4 : 5} onChange={e => setKey(k, e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand" />
+            </div>
+          </details>
         ))}
-        <button type="button" onClick={addTerm} className="flex items-center gap-1.5 text-brand text-xs font-semibold hover:bg-brand/5 px-3 py-1.5 rounded-lg transition-colors">
-          <Plus size={13} /> Add condition
-        </button>
+        {DOC_LISTS(isMicro).map(k => (
+          <details key={k} className="border border-gray-200 rounded-lg" open={k === 'commercial' || k === 'mcommercial'}>
+            <summary className="px-3 py-2 text-xs font-semibold text-gray-700 cursor-pointer flex items-center justify-between">
+              <span>{LIST_TITLES[k]} <span className="text-gray-400 font-normal">({listOf(k).length})</span>{k in doc && <span className="ml-2 text-brand font-normal">(edited)</span>}</span>
+              {k in doc && <button type="button" onClick={e => { e.preventDefault(); resetKey(k) }} className="text-brand font-semibold hover:underline">Reset</button>}
+            </summary>
+            <div className="p-3 pt-0 space-y-2">
+              {listOf(k).map((t, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <span className="text-xs text-gray-400 pt-2 w-5 shrink-0">{i + 1}.</span>
+                  <textarea value={t} rows={3} onChange={e => setKey(k, listOf(k).map((x, j) => j === i ? e.target.value : x))}
+                    className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand" />
+                  <button type="button" onClick={() => setKey(k, listOf(k).filter((_, j) => j !== i))} className="text-gray-300 hover:text-red-400 p-1 mt-1" title="Remove this point"><Trash2 size={14} /></button>
+                </div>
+              ))}
+              <button type="button" onClick={() => setKey(k, [...listOf(k), ''])} className="flex items-center gap-1.5 text-brand text-xs font-semibold hover:bg-brand/5 px-3 py-1.5 rounded-lg transition-colors">
+                <Plus size={13} /> Add point
+              </button>
+            </div>
+          </details>
+        ))}
       </div>
 
       <div className="flex items-center justify-between py-2">
-        <button onClick={() => { setItems([newItem(1)]); setNextId(2); setClientName(''); setClientPhone(''); setClientEmail(''); setNotes(''); setHandledBy(''); setEnquiredBy(''); setFinishType('ACRALIYC'); setTerms(null) }}
+        <button onClick={() => { setItems([newItem(1)]); setNextId(2); setClientName(''); setClientPhone(''); setClientEmail(''); setNotes(''); setHandledBy(''); setEnquiredBy(''); setFinishType('ACRALIYC'); setDoc({}) }}
           className="btn-ghost text-sm">Clear</button>
         <button disabled={!clientName || saving} onClick={handleSave} className="btn-gold flex items-center gap-1.5 text-sm disabled:opacity-50">
           {saving ? 'Saving...' : editing ? 'Update Quotation' : 'Save Quotation → Sheet'}

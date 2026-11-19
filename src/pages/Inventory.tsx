@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Search, Warehouse, Package2, AlertCircle, Plus, X, CheckCheck, ArrowRight, RotateCcw, Truck, RefreshCw, Trash2, Pencil, ClipboardList, GitCompare } from 'lucide-react'
 import { addRow, fetchSheet, deleteRow } from '../lib/api'
+import { addRowVerified } from '../lib/safeSave'
 import { useLanguage } from '../hooks/useLanguage'
 import DispatchRegister, { DispatchList, isDispatch } from '../components/inventory/DispatchRegister'
 import ProductSheetCheck from '../components/inventory/ProductSheetCheck'
@@ -222,6 +223,17 @@ export default function Inventory() {
   }
 
   useEffect(() => { syncFromSheet(true) }, [syncFromSheet])
+  // A tab left open all day went stale (entries made from another device or
+  // earlier never appeared). Re-read the sheet on tab switch, when the window
+  // regains focus, and every 60 seconds.
+  useEffect(() => { syncFromSheet(true) }, [tab, syncFromSheet])
+  useEffect(() => {
+    const onFocus = () => { if (document.visibilityState === 'visible') syncFromSheet(true) }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onFocus)
+    const t = window.setInterval(onFocus, 60000)
+    return () => { window.removeEventListener('focus', onFocus); document.removeEventListener('visibilitychange', onFocus); window.clearInterval(t) }
+  }, [syncFromSheet])
 
   const totalGodown = stock.reduce((a,s) => a + s.godownKg, 0)
   const totalSea    = stock.reduce((a,s) => a + s.seaAirKg, 0)
@@ -324,14 +336,15 @@ export default function Inventory() {
       return
     }
     setSaving(true)
-    if (fromGodown) {
-      setStock(prev => prev.map(s => s.name === dispForm.product ? { ...s, dispatch: s.dispatch + qty, godownQty: s.godownQty - qty, godownKg: s.godownKg - qty } : s))
-      await addRow('Stock', { Product: dispForm.product, Location: 'Dispatch', Qty: dispForm.qty, Notes: `Project: ${dispForm.project.trim()} | Client: ${dispForm.client.trim()} | ${dispForm.notes}`, 'Updated By': 'Dashboard', Date: dispForm.date })
-    } else {
-      setStock(prev => prev.map(s => s.name === dispForm.product ? { ...s, dispatch: s.dispatch + qty, seaAirQty: s.seaAirQty - qty, seaAirKg: s.seaAirKg - qty } : s))
-      await addRow('Stock', { Product: dispForm.product, Location: 'Dispatch-SeaAir', Qty: dispForm.qty, Notes: `Project: ${dispForm.project.trim()} | Client: ${dispForm.client.trim()} | ${dispForm.notes}`, 'Updated By': 'Dashboard', Date: dispForm.date })
-    }
+    const notes = `Project: ${dispForm.project.trim()} | Client: ${dispForm.client.trim()} | ${dispForm.notes}`
+    // The backend often answers a good write with an HTML page, so confirm by re-reading the sheet.
+    const { saved } = await addRowVerified('Stock', { Product: dispForm.product, Location: fromGodown ? 'Dispatch' : 'Dispatch-SeaAir', Qty: dispForm.qty, Notes: notes, 'Updated By': 'Dashboard', Date: dispForm.date }, ['Product','Location','Qty','Notes','Date'])
     setSaving(false)
+    if (!saved) {
+      showToast(`✗ Dispatch NOT saved — please check your internet and try again`)
+      syncFromSheet(true)
+      return
+    }
     showToast(`✓ ${dispForm.product} — ${qty} units dispatched (from ${fromGodown ? 'Godown' : 'Sea Air'})`)
     setDispForm({ product:'', qty:'', project:'', client:'', date: new Date().toLocaleDateString('en-IN'), notes:'' })
     syncFromSheet(true)
@@ -341,9 +354,13 @@ export default function Inventory() {
     if (!retForm.product || !retForm.qty) return
     setSaving(true)
     const qty = Number(retForm.qty)
-    setStock(prev => prev.map(s => s.name === retForm.product ? { ...s, productReturn: s.productReturn + qty, godownQty: s.godownQty + qty, godownKg: s.godownKg + qty } : s))
-    await addRow('Stock', { Product: retForm.product, Location: 'Return→Godown', Qty: retForm.qty, Notes: `Reason: ${retForm.reason} | ${retForm.notes}`, 'Updated By': 'Dashboard', Date: retForm.date })
+    const { saved } = await addRowVerified('Stock', { Product: retForm.product, Location: 'Return→Godown', Qty: retForm.qty, Notes: `Reason: ${retForm.reason} | ${retForm.notes}`, 'Updated By': 'Dashboard', Date: retForm.date }, ['Product','Location','Qty','Notes','Date'])
     setSaving(false)
+    if (!saved) {
+      showToast(`✗ Return NOT saved — please check your internet and try again`)
+      syncFromSheet(true)
+      return
+    }
     showToast(`✓ ${retForm.product} — ${qty} units returned to Godown`)
     setRetForm({ product:'', qty:'', reason:'', date: new Date().toLocaleDateString('en-IN'), notes:'' })
     syncFromSheet(true)
